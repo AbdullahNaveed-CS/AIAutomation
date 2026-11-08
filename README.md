@@ -64,7 +64,7 @@ Engineered with an **offline-first caching layer**, this tool allows energy audi
 
 ### 1. Clone the Repository
 ```bash
-git clone 
+git clone https://github.com/AbdullahNaveed-CS/AIAutomation.git
 cd ai-solar-sizing-tool
 
 ```
