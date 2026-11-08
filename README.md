@@ -15,8 +15,8 @@ Engineered with an **offline-first caching layer**, this tool allows energy audi
 ## 🚀 Key Features
 
 * **Satellite Image Area Extraction**: Identifies usable rooftop surface area from aerial imagery inputs.
-* **Irradiance &amp; Yield Calculation**: Computes solar irradiance estimates based on regional coordinates and tilt angles.
-* **System Capacity &amp; Panel Layout**: Calculates maximum panel density, inverter sizing requirements, and estimated daily/annual kWh yield.
+* **Irradiance & Yield Calculation**: Computes solar irradiance estimates based on regional coordinates and tilt angles.
+* **System Capacity & Panel Layout**: Calculates maximum panel density, inverter sizing requirements, and estimated daily/annual kWh yield.
 * **Offline-First Architecture**: Caches geographic dataset parameters locally to execute full computations during local grid blackouts.
 * **Automated PDF/JSON Report Generation**: Exports comprehensive technical summaries for engineers and clients in under 5 seconds.
 
@@ -35,10 +35,10 @@ Engineered with an **offline-first caching layer**, this tool allows energy audi
 ## 🛠️ Tech Stack &amp; Dependencies
 
 * **Language**: Python 3.10+
-* **Data &amp; Image Processing**: `NumPy`, `Pandas`, `OpenCV (`cv2`)`, `Pillow`
-* **Math &amp; Solar Analytics**: `SciPy`, Custom Photovoltaic Yield Modules
-* **Visualization &amp; Reporting**: `Matplotlib`, `ReportLab`
-* **Version Control &amp; CI/CD**: Git, GitHub Actions
+* **Data & Image Processing**: `NumPy`, `Pandas`, `OpenCV (`cv2`)`, `Pillow`
+* **Math & Solar Analytics**: `SciPy`, Custom Photovoltaic Yield Modules
+* **Visualization & Reporting**: `Matplotlib`, `ReportLab`
+* **Version Control &a CI/CD**: Git, GitHub Actions
 
 ---
 
@@ -132,9 +132,3 @@ ai-solar-sizing-tool/
 * **Focus**: Cloud Security, DevSecOps, & Resilient Systems Architecture
 * **Founder**: Skill Up Youth EdTech Initiative
 ---
-
-## 📄 License
-
-This project is open-source under the **MIT License**.
-🎯 **Next Step**: Would you like to select your **650-word Common App Personal Statement prompt** and begin outlining your essay, or create a `README.md` for your **Skill Up Youth NGO** portal?
-```
