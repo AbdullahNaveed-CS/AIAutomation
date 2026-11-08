@@ -26,7 +26,25 @@ Engineered with an **offline-first caching layer**, this tool allows energy audi
 
 ```
 
-[ Satellite Input / Coordinates ] │ ▼ ┌───────────────────────┐ │ Image Preprocessing │ ◄── Grayscale / Edge Detection (OpenCV) └───────────┬───────────┘ │ ▼ ┌───────────────────────┐ │ Surface & Tilt Math │ ◄── Spatial Area & Orientation Algorithm └───────────┬───────────┘ │ ▼ ┌───────────────────────┐ │ Irradiance Engine │ ◄── Offline Solar Dataset Caching └───────────┬───────────┘ │ ▼ [ Automated Feasibility Report ] ──► (JSON / PDF Output)
+[ Satellite Input / Coordinates ]
+               │
+               ▼
+┌─────────────────────────────┐
+│    Image Preprocessing      │ ◄── Grayscale / Edge Detection (OpenCV)
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│    Surface & Tilt Math      │ ◄── Spatial Area & Orientation Algorithm
+└──────────────┬──────────────┘
+               │
+               ▼
+┌─────────────────────────────┐
+│      Irradiance Engine      │ ◄── Offline Solar Dataset Caching
+└──────────────┬──────────────┘
+               │
+               ▼
+ [ Automated Feasibility Report ] ──► (JSON / PDF Output)
 
 ```
 
