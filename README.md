@@ -17,6 +17,10 @@ An automated air quality monitoring, hotspot attribution, and PM2.5 forecasting 
 | **4** | **Ground Sensors (OpenAQ)** | Hourly | Ingests live PM2.5 readings from 30+ ground monitoring stations in Lahore and logs API health. |
 | **5** | **Officer Dashboard** | Webhook | Serves a zero-script, low-bandwidth HTML/SVG situational dashboard with ranked hotspots and source health. |
 | **6** | **Google Sheets Sync & Email Digest** | Twice Daily | Exports all 6 data tables to Google Sheets and emails a non-specialist public health summary via Gmail. |
+### Live System Preview
+![Automated Public Health Email Digest](lahore-smoke-watch/email-dashboard-1.png)
+![Automated Public Health Email Digest](lahore-smoke-watch/email-dashboard-2.png)
+![n8n Multi-Workflow Pipeline](lahore-smoke-watch/n8n-workflow.png)
 
 ### Setup & Import Guide
 1. **Create 6 n8n Data Tables:** `smoke_observations`, `smoke_fires`, `smoke_hotspots`, `smoke_forecasts`, `smoke_facilities`, and `smoke_pull_log`.
