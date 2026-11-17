@@ -30,10 +30,9 @@ An automated air quality monitoring, hotspot attribution, and PM2.5 forecasting 
 
 ---
 
-## Other Automation Systems in This Repository
-* **Healthcare AI:** `BrainGuard AI — Patient Assessment Records.json`, `Doctor's appointment agent.json`
-* **Business & Operations:** `Automate entire solar company.json`, `Complete consultancy United States agency.json`
-* **Data & Messaging Pipelines:** `Complete Telegram + Gmail data analysis workflow.json`, `Complete workflow of data analysis.json`, `AI Chat Agent.json`
+* **[Healthcare AI](./healthcare-ai):** Neurological patient assessment logging (`BrainGuard AI`) and automated clinic appointment scheduling.
+* **[Business & Operations](./business-automation):** End-to-end solar company pipeline automation and US consultancy intake workflows.
+* **[Data & Messaging Agents](./data-and-messaging-agents):** Cross-platform Telegram + Gmail automated data analysis pipelines and conversational AI agents.
 
 
 ## Repository Project Timeline
