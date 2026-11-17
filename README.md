@@ -35,6 +35,12 @@ An automated air quality monitoring, hotspot attribution, and PM2.5 forecasting 
 * **Business & Operations:** `Automate entire solar company.json`, `Complete consultancy United States agency.json`
 * **Data & Messaging Pipelines:** `Complete Telegram + Gmail data analysis workflow.json`, `Complete workflow of data analysis.json`, `AI Chat Agent.json`
 
+## Other Automation Systems in This Repository
+* **[Healthcare AI](./healthcare-ai):** Neurological patient assessment logging (`BrainGuard AI`) and conversational clinic appointment scheduling.
+* **[Business & Operations](./business-automation):** End-to-end solar company pipeline automation and US consultancy intake workflows.
+* **[Data & Messaging Agents](./data-and-messaging-agents):** Cross-platform Telegram + Gmail automated data analysis pipelines and conversational AI agents.
+
+
 ## Repository Project Timeline
 * **[lahore-smoke-watch](./lahore-smoke-watch)** *(Nov 2026)* — Automated PM2.5 hotspot attribution, ridge regression forecasting, and low-bandwidth officer dashboard.
 * **[business-automation](./business-automation)** *(Feb – Aug 2026)* — End-to-end solar company pipeline and US consultancy intake automation.
