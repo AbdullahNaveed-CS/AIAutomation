@@ -1,0 +1,498 @@
+{
+  "name": "Smoke – 2. 12-Hour PM2.5 Forecast",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "bc013ef4-befc-4ba3-a887-5ca2b207c80b",
+      "name": "Every 3 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=31.52&longitude=74.35&hourly=pm2_5&past_days=60&forecast_days=2&timezone=GMT",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "69442597-85c7-4884-b73c-936fc9cf48c0",
+      "name": "Fetch AQ History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        96
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=31.52&longitude=74.35&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&wind_speed_unit=ms&past_days=60&forecast_days=2&timezone=GMT",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "7a88ee2d-facc-4bc6-a0bc-de2b3d454c1e",
+      "name": "Fetch Weather History",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        96
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Interpretable 12-hour PM2.5 forecast: ridge regression on lagged PM2.5, weather and hour-of-day.\n// Evaluated on a chronological hold-out (never shuffled) against two baselines.\nvar runAt = new Date().toISOString();\nvar H = 12;\nfunction logOut(status, records, message) {\n  return { json: { kind: 'log', run_at: runAt, run_id: 'fc' + Date.now(), source: 'forecast', status: status, records: records, message: String(message).substring(0, 400) } };\n}\nvar aq, wx;\ntry { aq = $('Fetch AQ History').first().json; wx = $('Fetch Weather History').first().json; } catch (e) { return [logOut('failed', 0, 'Upstream fetch did not run')]; }\nif (!aq || !aq.hourly || !aq.hourly.time || !wx || !wx.hourly || !wx.hourly.time) {\n  return [logOut('failed', 0, 'History data unavailable (air quality or weather request failed); no forecast issued')];\n}\nvar times = aq.hourly.time;\nvar pm = aq.hourly.pm2_5;\nvar wmap = {};\nfor (var i = 0; i < wx.hourly.time.length; i++) wmap[wx.hourly.time[i]] = i;\nvar nowMs = Date.now();\nvar nowIdx = -1;\nfor (var k = 0; k < times.length; k++) { if (Date.parse(times[k] + ':00Z') <= nowMs) nowIdx = k; }\nfunction val(arr, idx) { var v = arr[idx]; return (v === null || v === undefined || !isFinite(Number(v))) ? null : Number(v); }\nfunction feat(t) {\n  var wi = wmap[times[t]];\n  if (wi === undefined) return null;\n  var p0 = val(pm, t), p3 = val(pm, t - 3), p6 = val(pm, t - 6), p12 = val(pm, t - 12), p24 = val(pm, t - 24);\n  var ws = val(wx.hourly.wind_speed_10m, wi), tc = val(wx.hourly.temperature_2m, wi), rh = val(wx.hourly.relative_humidity_2m, wi);\n  if (p0 === null || p3 === null || p6 === null || p12 === null || p24 === null || ws === null || tc === null || rh === null) return null;\n  var hr = new Date(Date.parse(times[t] + ':00Z')).getUTCHours();\n  return { x: [p0, p3, p6, p12, p24, ws, tc, rh, Math.sin(2 * Math.PI * hr / 24), Math.cos(2 * Math.PI * hr / 24)], hr: hr };\n}\nvar rowsX = [];\nfor (var t = 24; t <= nowIdx - H; t++) {\n  var f = feat(t);\n  var y = val(pm, t + H);\n  if (f && y !== null) rowsX.push({ x: f.x, y: y, hr: f.hr });\n}\nif (rowsX.length < 200) { return [logOut('failed', rowsX.length, 'Not enough complete history rows to train (' + rowsX.length + ')')]; }\nvar trainN = Math.floor(rowsX.length * 0.75);\nvar train = rowsX.slice(0, trainN);\nvar test = rowsX.slice(trainN + H);\nif (test.length < 24) { return [logOut('failed', rowsX.length, 'Hold-out set too small')]; }\nvar d = train[0].x.length;\nvar mean = [], sd = [];\nfor (var j = 0; j < d; j++) {\n  var s = 0;\n  for (var a = 0; a < train.length; a++) s += train[a].x[j];\n  var m = s / train.length;\n  var v = 0;\n  for (var b = 0; b < train.length; b++) v += Math.pow(train[b].x[j] - m, 2);\n  mean.push(m); sd.push(Math.sqrt(v / train.length) || 1);\n}\nvar ybar = 0;\nfor (var c = 0; c < train.length; c++) ybar += train[c].y;\nybar = ybar / train.length;\nfunction z(x) { var o = []; for (var q = 0; q < d; q++) o.push((x[q] - mean[q]) / sd[q]); return o; }\nvar A = [], bvec = [];\nfor (var r = 0; r < d; r++) { var rowA = []; for (var cc = 0; cc < d; cc++) rowA.push(r === cc ? 1.0 : 0); A.push(rowA); bvec.push(0); }\nfor (var n = 0; n < train.length; n++) {\n  var zz = z(train[n].x);\n  for (var r2 = 0; r2 < d; r2++) {\n    bvec[r2] += zz[r2] * (train[n].y - ybar);\n    for (var c2 = 0; c2 < d; c2++) A[r2][c2] += zz[r2] * zz[c2];\n  }\n}\nfunction solve(M, vec) {\n  var N = vec.length;\n  for (var i1 = 0; i1 < N; i1++) M[i1].push(vec[i1]);\n  for (var col = 0; col < N; col++) {\n    var piv = col;\n    for (var r3 = col + 1; r3 < N; r3++) { if (Math.abs(M[r3][col]) > Math.abs(M[piv][col])) piv = r3; }\n    var tmp = M[col]; M[col] = M[piv]; M[piv] = tmp;\n    var dv = M[col][col];\n    if (Math.abs(dv) < 1e-12) return null;\n    for (var j1 = col; j1 <= N; j1++) M[col][j1] = M[col][j1] / dv;\n    for (var r4 = 0; r4 < N; r4++) {\n      if (r4 !== col) {\n        var fct = M[r4][col];\n        if (fct !== 0) { for (var j2 = col; j2 <= N; j2++) M[r4][j2] -= fct * M[col][j2]; }\n      }\n    }\n  }\n  var res = [];\n  for (var i2 = 0; i2 < N; i2++) res.push(M[i2][N]);\n  return res;\n}\nvar w = solve(A, bvec);\nif (!w) { return [logOut('failed', rowsX.length, 'Regression could not be solved')]; }\nfunction predict(x) {\n  var zx = z(x);\n  var out = ybar;\n  for (var u = 0; u < d; u++) out += w[u] * zx[u];\n  return Math.max(0, out);\n}\nvar hourSum = {}, hourN = {}, allSum = 0;\nfor (var e = 0; e < train.length; e++) {\n  var th = (train[e].hr + H) % 24;\n  hourSum[th] = (hourSum[th] || 0) + train[e].y;\n  hourN[th] = (hourN[th] || 0) + 1;\n  allSum += train[e].y;\n}\nfunction seasonal(hr) { var th2 = (hr + H) % 24; return hourN[th2] ? hourSum[th2] / hourN[th2] : allSum / train.length; }\nvar eM = [0, 0], eP = [0, 0], eS = [0, 0];\nfor (var g = 0; g < test.length; g++) {\n  var tr = test[g];\n  var dm = predict(tr.x) - tr.y, dp = tr.x[0] - tr.y, ds = seasonal(tr.hr) - tr.y;\n  eM[0] += Math.abs(dm); eM[1] += dm * dm;\n  eP[0] += Math.abs(dp); eP[1] += dp * dp;\n  eS[0] += Math.abs(ds); eS[1] += ds * ds;\n}\nvar nT = test.length;\nfunction r2d(v) { return Math.round(v * 100) / 100; }\nvar maeM = r2d(eM[0] / nT), maeP = r2d(eP[0] / nT), maeS = r2d(eS[0] / nT);\nvar rmseM = r2d(Math.sqrt(eM[1] / nT)), rmseP = r2d(Math.sqrt(eP[1] / nT)), rmseS = r2d(Math.sqrt(eS[1] / nT));\nvar beats = maeM < maeP && maeM < maeS && rmseM < rmseP && rmseM < rmseS;\nvar fNow = feat(nowIdx);\nif (!fNow) { return [logOut('failed', rowsX.length, 'Latest observation incomplete; no forecast issued rather than showing an old one')]; }\nvar tgtIdx = nowIdx + H;\nvar cams = tgtIdx < pm.length ? val(pm, tgtIdx) : null;\nvar issued = new Date(Date.parse(times[nowIdx] + ':00Z')).toISOString();\nvar target = new Date(Date.parse(times[nowIdx] + ':00Z') + H * 3600000).toISOString();\nvar fcRow = {\n  kind: 'forecast', issued_at: issued, target_time: target, location: 'Lahore centre (31.52N, 74.35E)',\n  pm25_now: r2d(fNow.x[0]), pm25_model: r2d(predict(fNow.x)), pm25_persistence: r2d(fNow.x[0]), pm25_seasonal: r2d(seasonal(fNow.hr)), pm25_cams: cams === null ? null : r2d(cams),\n  mae_model: maeM, mae_persistence: maeP, mae_seasonal: maeS, rmse_model: rmseM, rmse_persistence: rmseP, rmse_seasonal: rmseS,\n  beats_baselines: beats, train_rows: train.length, test_rows: nT\n};\nvar msg = 'MAE model ' + maeM + ' vs persistence ' + maeP + ' vs seasonal ' + maeS + '; RMSE ' + rmseM + ' / ' + rmseP + ' / ' + rmseS + '. ' + (beats ? 'Model beats both baselines on the hold-out.' : 'Model does NOT beat both baselines on the hold-out; treat the forecast with caution.');\nreturn [{ json: fcRow }, logOut('ok', 1, msg)];"
+      },
+      "id": "36ae53f1-d3e3-4b54-a2c9-a0aa37ea779b",
+      "name": "Train & Forecast",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "forecast"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "forecast"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "log"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "log"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "87dbae34-870d-492d-a375-9142f858216e",
+      "name": "Route Forecast Output",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "0PhAoNd47PlDeTP9",
+          "cachedResultName": "smoke_forecasts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "issued_at": "={{ $json.issued_at }}",
+            "target_time": "={{ $json.target_time }}",
+            "location": "={{ $json.location }}",
+            "pm25_now": "={{ $json.pm25_now }}",
+            "pm25_model": "={{ $json.pm25_model }}",
+            "pm25_persistence": "={{ $json.pm25_persistence }}",
+            "pm25_seasonal": "={{ $json.pm25_seasonal }}",
+            "pm25_cams": "={{ $json.pm25_cams }}",
+            "mae_model": "={{ $json.mae_model }}",
+            "mae_persistence": "={{ $json.mae_persistence }}",
+            "mae_seasonal": "={{ $json.mae_seasonal }}",
+            "rmse_model": "={{ $json.rmse_model }}",
+            "rmse_persistence": "={{ $json.rmse_persistence }}",
+            "rmse_seasonal": "={{ $json.rmse_seasonal }}",
+            "beats_baselines": "={{ $json.beats_baselines }}",
+            "train_rows": "={{ $json.train_rows }}",
+            "test_rows": "={{ $json.test_rows }}"
+          },
+          "schema": [
+            {
+              "id": "issued_at",
+              "displayName": "issued_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "target_time",
+              "displayName": "target_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm25_now",
+              "displayName": "pm25_now",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm25_model",
+              "displayName": "pm25_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm25_persistence",
+              "displayName": "pm25_persistence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm25_seasonal",
+              "displayName": "pm25_seasonal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm25_cams",
+              "displayName": "pm25_cams",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mae_model",
+              "displayName": "mae_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mae_persistence",
+              "displayName": "mae_persistence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mae_seasonal",
+              "displayName": "mae_seasonal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rmse_model",
+              "displayName": "rmse_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rmse_persistence",
+              "displayName": "rmse_persistence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rmse_seasonal",
+              "displayName": "rmse_seasonal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "beats_baselines",
+              "displayName": "beats_baselines",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "train_rows",
+              "displayName": "train_rows",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "test_rows",
+              "displayName": "test_rows",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "70b3ca6f-329b-468b-8b5e-8c2dcbefa09b",
+      "name": "Save Forecast",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "voAbz9aKaSqfrnLq",
+          "cachedResultName": "smoke_pull_log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_at": "={{ $json.run_at }}",
+            "run_id": "={{ $json.run_id }}",
+            "source": "={{ $json.source }}",
+            "status": "={{ $json.status }}",
+            "records": "={{ $json.records }}",
+            "message": "={{ $json.message }}"
+          },
+          "schema": [
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "run_id",
+              "displayName": "run_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "records",
+              "displayName": "records",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e8c3bbe7-3e28-4e03-bc29-d6c06c97721e",
+      "name": "Save Forecast Log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        192
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 3 Hours": {
+      "main": [
+        [
+          {
+            "node": "Fetch AQ History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch AQ History": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weather History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weather History": {
+      "main": [
+        [
+          {
+            "node": "Train & Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Train & Forecast": {
+      "main": [
+        [
+          {
+            "node": "Route Forecast Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Forecast Output": {
+      "main": [
+        [
+          {
+            "node": "Save Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Forecast Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "08d929ca-081c-47bb-b925-b46f88df52b8",
+  "meta": {
+    "instanceId": "f5edcadffac9b96e337b4d063f2d82e4614b33770dda19b26f9e5d432da89108"
+  },
+  "nodeGroups": [],
+  "id": "lbZeRXFyKGKVvgW5",
+  "tags": []
+}

@@ -1,0 +1,287 @@
+{
+  "name": "Smoke – 5. Officer Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "smoke-officer-dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1a0f9363-f209-4671-9bed-e8d3d3d5880a",
+      "name": "Officer Dashboard Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "576360c2-73ee-4b99-a53b-bab0d49cbfce"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "v4QXF25aDnMTm9tg",
+          "cachedResultName": "smoke_hotspots"
+        },
+        "limit": 100,
+        "orderBy": true
+      },
+      "id": "f4c05bde-2e82-4757-b8ca-e4f3e830830b",
+      "name": "Read Hotspots",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        128
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "h6A6b6YqQBIzW5c5",
+          "cachedResultName": "smoke_observations"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "source",
+              "keyValue": "open-meteo-cams"
+            }
+          ]
+        },
+        "limit": 60,
+        "orderBy": true
+      },
+      "id": "72d11ff2-2f9b-4ca7-b6f8-bd0a4ff72828",
+      "name": "Read Observations",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "BZNhutm1KgkTv0rS",
+          "cachedResultName": "smoke_fires"
+        },
+        "limit": 300,
+        "orderBy": true
+      },
+      "id": "c40c6224-336b-46cc-abb8-eebc5411e623",
+      "name": "Read Fires",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "0PhAoNd47PlDeTP9",
+          "cachedResultName": "smoke_forecasts"
+        },
+        "limit": 1,
+        "orderBy": true
+      },
+      "id": "f632fc5b-24e0-456e-8e66-c76a3aefb159",
+      "name": "Read Forecast",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "voAbz9aKaSqfrnLq",
+          "cachedResultName": "smoke_pull_log"
+        },
+        "limit": 150,
+        "orderBy": true
+      },
+      "id": "25e9c15c-6c0e-4233-a9d9-f214a96188ca",
+      "name": "Read Pull Log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1168,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Server-rendered page: no JavaScript, no external assets, one small SVG map -> works on weak connections.\nfunction rows(name) {\n  try { return $(name).all().map(function (i) { return i.json; }).filter(function (j) { return j && j.id !== undefined; }); } catch (e) { return []; }\n}\nfunction esc(s) { return String(s === null || s === undefined ? '' : s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('\"').join('&quot;'); }\nfunction num(v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; }\nfunction fmt(v, d) { var n = num(v); return n === null ? 'n/a' : n.toFixed(d === undefined ? 0 : d); }\nvar now = Date.now();\nfunction ageH(iso) { var t = Date.parse(iso); return isFinite(t) ? (now - t) / 3600000 : null; }\nfunction local(iso) { var t = Date.parse(iso); if (!isFinite(t)) return 'n/a'; return new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Karachi', dateStyle: 'medium', timeStyle: 'short' }) + ' PKT'; }\n\nvar hot = rows('Read Hotspots');\nvar obs = rows('Read Observations');\nvar fires = rows('Read Fires');\nvar fc = rows('Read Forecast');\nvar logs = rows('Read Pull Log');\n\n// --- Source health (never present old data as current) ---\nvar latest = {};\nlogs.forEach(function (l) { if (!latest[l.source]) latest[l.source] = l; });\nvar specs = [\n  ['open-meteo-cams', 'CAMS air quality (via Open-Meteo)', 3, true],\n  ['open-meteo-weather', 'Weather and wind (Open-Meteo)', 3, true],\n  ['nasa-firms', 'NASA FIRMS active fires', 3, true],\n  ['openaq', 'OpenAQ ground sensors', 3, false],\n  ['osm-facilities', 'OpenStreetMap industrial sites', 240, false],\n  ['detection', 'Hotspot detection', 3, true],\n  ['forecast', '12-hour forecast model', 8, true]\n];\nvar srcHtml = '';\nvar problems = [];\nfor (var s = 0; s < specs.length; s++) {\n  var sp = specs[s];\n  var l = latest[sp[0]];\n  var state = 'NO DATA YET';\n  var cls = 'bad';\n  var when = 'never';\n  var msg = '';\n  if (l) {\n    var a = ageH(l.run_at);\n    when = local(l.run_at);\n    msg = l.message;\n    if (l.status === 'ok' && a !== null && a <= sp[2]) { state = 'OK'; cls = 'ok'; }\n    else if (l.status === 'ok') { state = 'STALE (' + Math.round(a) + ' h old)'; cls = 'bad'; }\n    else if (l.status === 'partial') { state = 'PARTIAL'; cls = 'warn'; }\n    else { state = String(l.status).toUpperCase(); cls = 'bad'; }\n  }\n  if (cls !== 'ok' && sp[3]) problems.push(sp[1] + ': ' + state);\n  srcHtml += '<tr><td>' + esc(sp[1]) + '</td><td class=\"' + cls + '\">' + esc(state) + '</td><td>' + esc(when) + '</td><td>' + esc(l ? l.records : '') + '</td><td class=\"small\">' + esc(msg) + '</td></tr>';\n}\n\n// --- Hotspots of the latest successful detection run only ---\nvar det = latest['detection'];\nvar detOk = det && det.status === 'ok' && ageH(det.run_at) !== null && ageH(det.run_at) <= 3;\nvar shown = detOk ? hot.filter(function (h) { return h.run_id === det.run_id; }) : [];\nshown.sort(function (x, y) { return Number(y.priority_score) - Number(x.priority_score); });\nvar lastUpdated = det ? det.run_at : null;\n\n// --- Latest grid observation per cell (only if fresh) ---\nvar cells = [];\nvar seen = {};\nobs.forEach(function (o) {\n  if (seen[o.cell_id]) return;\n  seen[o.cell_id] = true;\n  var a2 = ageH(o.observed_at);\n  if (a2 !== null && a2 <= 4) cells.push(o);\n});\n\n// --- SVG map ---\nvar W = 560, Hh = 560, lonMin = 73.9, lonMax = 74.7, latMin = 31.15, latMax = 31.85;\nfunction X(lon) { return Math.round((lon - lonMin) / (lonMax - lonMin) * W * 10) / 10; }\nfunction Y(lat) { return Math.round((latMax - lat) / (latMax - latMin) * Hh * 10) / 10; }\nfunction pmColor(p) { return p < 35 ? '#8bc34a' : p < 55 ? '#ffeb3b' : p < 100 ? '#ff9800' : p < 150 ? '#f44336' : '#8e24aa'; }\nfunction sevColor(sv) { return sv === 'severe' ? '#4a148c' : sv === 'high' ? '#b71c1c' : '#e65100'; }\nvar cw = 0.15 / (lonMax - lonMin) * W, ch = 0.125 / (latMax - latMin) * Hh;\nvar svg = '<svg viewBox=\"0 0 ' + W + ' ' + Hh + '\" width=\"100%\" role=\"img\" aria-label=\"Hotspot map of Lahore region\" style=\"max-width:640px;background:#eef3f7;border:1px solid #bbb\">';\ncells.forEach(function (c) {\n  var p = Number(c.pm25);\n  svg += '<rect x=\"' + (X(Number(c.lon)) - cw / 2) + '\" y=\"' + (Y(Number(c.lat)) - ch / 2) + '\" width=\"' + cw + '\" height=\"' + ch + '\" fill=\"' + pmColor(p) + '\" fill-opacity=\"0.55\" stroke=\"#fff\"><title>' + esc(c.cell_id) + ' PM2.5 ' + fmt(p) + ' ug/m3, wind from ' + fmt(c.wind_dir) + ' deg</title></rect>';\n  svg += '<text x=\"' + X(Number(c.lon)) + '\" y=\"' + (Y(Number(c.lat)) + 4) + '\" font-size=\"11\" text-anchor=\"middle\" fill=\"#333\">' + fmt(p) + '</text>';\n});\nfires.forEach(function (f) {\n  var fa = ageH(f.acq_time);\n  var la = num(f.lat), lo = num(f.lon);\n  if (la === null || lo === null || fa === null || fa > 36 || la < latMin || la > latMax || lo < lonMin || lo > lonMax) return;\n  svg += '<circle cx=\"' + X(lo) + '\" cy=\"' + Y(la) + '\" r=\"3.5\" fill=\"#ff3d00\" stroke=\"#000\" stroke-width=\"0.8\"><title>Fire detection ' + esc(f.acq_time) + ' FRP ' + fmt(f.frp, 1) + '</title></circle>';\n});\nsvg += '<circle cx=\"' + X(74.35) + '\" cy=\"' + Y(31.52) + '\" r=\"3\" fill=\"#1565c0\"/><text x=\"' + (X(74.35) + 6) + '\" y=\"' + (Y(31.52) - 4) + '\" font-size=\"11\" fill=\"#1565c0\">Lahore</text>';\nshown.slice(0, 25).forEach(function (h, idx) {\n  svg += '<circle cx=\"' + X(Number(h.lon)) + '\" cy=\"' + Y(Number(h.lat)) + '\" r=\"13\" fill=\"none\" stroke=\"' + sevColor(h.severity) + '\" stroke-width=\"3\"><title>#' + (idx + 1) + ' ' + esc(h.attribution) + '</title></circle>';\n  svg += '<text x=\"' + X(Number(h.lon)) + '\" y=\"' + (Y(Number(h.lat)) + 4) + '\" font-size=\"12\" font-weight=\"bold\" text-anchor=\"middle\" fill=\"' + sevColor(h.severity) + '\">' + (idx + 1) + '</text>';\n});\nsvg += '</svg>';\n\n// --- Hotspot table ---\nvar tbl = '';\nshown.slice(0, 25).forEach(function (h, idx) {\n  var link = 'https://www.openstreetmap.org/?mlat=' + h.lat + '&mlon=' + h.lon + '#map=13/' + h.lat + '/' + h.lon;\n  tbl += '<tr><td>' + (idx + 1) + '</td><td class=\"sev-' + esc(h.severity) + '\">' + esc(String(h.severity).toUpperCase()) + '</td><td>' + fmt(h.pm25) + '</td><td>' + esc(h.attribution) + '<br><span class=\"small\">confidence: ' + esc(h.attribution_confidence) + '</span></td>';\n  tbl += '<td class=\"small\">fires upwind ' + esc(h.fires_upwind) + ', near ' + esc(h.fires_nearby) + '; industrial sites ' + esc(h.facilities_nearby) + '; ground sensor: ' + esc(h.ground_agreement) + (num(h.ground_pm25) !== null ? ' (' + fmt(h.ground_pm25) + ')' : '') + '<details><summary>evidence</summary>' + esc(h.evidence) + '</details></td>';\n  tbl += '<td><a href=\"' + esc(link) + '\">map</a></td></tr>';\n});\nif (!tbl) tbl = '<tr><td colspan=\"6\">' + (detOk ? 'No hotspots flagged in the latest run.' : 'No current hotspot list: the latest detection run is missing, failed or stale. Older results are intentionally hidden.') + '</td></tr>';\n\n// --- Forecast card ---\nvar fcHtml = '<p>No forecast available yet.</p>';\nvar f0 = fc[0];\nif (f0) {\n  var fa2 = ageH(f0.issued_at);\n  var fStale = fa2 === null || fa2 > 8;\n  fcHtml = '<p>Issued ' + esc(local(f0.issued_at)) + ' for ' + esc(local(f0.target_time)) + (fStale ? ' <b class=\"bad\">STALE - do not rely on it</b>' : '') + '</p>';\n  fcHtml += '<table><tr><th></th><th>PM2.5 (ug/m3)</th><th>MAE</th><th>RMSE</th></tr>';\n  fcHtml += '<tr><td><b>Model (ridge)</b></td><td><b>' + fmt(f0.pm25_model) + '</b></td><td>' + fmt(f0.mae_model, 1) + '</td><td>' + fmt(f0.rmse_model, 1) + '</td></tr>';\n  fcHtml += '<tr><td>Baseline: nothing changes</td><td>' + fmt(f0.pm25_persistence) + '</td><td>' + fmt(f0.mae_persistence, 1) + '</td><td>' + fmt(f0.rmse_persistence, 1) + '</td></tr>';\n  fcHtml += '<tr><td>Baseline: seasonal average</td><td>' + fmt(f0.pm25_seasonal) + '</td><td>' + fmt(f0.mae_seasonal, 1) + '</td><td>' + fmt(f0.rmse_seasonal, 1) + '</td></tr>';\n  fcHtml += '<tr><td>CAMS own forecast (reference)</td><td>' + fmt(f0.pm25_cams) + '</td><td>-</td><td>-</td></tr></table>';\n  fcHtml += '<p class=\"small\">Now: ' + fmt(f0.pm25_now) + ' ug/m3. Hold-out test on ' + esc(f0.test_rows) + ' unseen hours (trained on ' + esc(f0.train_rows) + '). ' + (f0.beats_baselines === true || f0.beats_baselines === 'true' ? 'The model currently beats both baselines.' : 'The model does NOT currently beat both baselines; the numbers above are reported honestly.') + '</p>';\n}\n\nvar banner = problems.length ? '<div class=\"banner\">DATA PROBLEM - results may be incomplete or out of date. ' + esc(problems.join(' | ')) + '</div>' : '';\nvar html = '<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"refresh\" content=\"300\"><title>Lahore smoke hotspots</title>';\nhtml += '<style>body{font-family:Arial,sans-serif;margin:12px;color:#222;max-width:980px}h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:18px 0 6px}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}th{background:#f0f0f0}.small{font-size:11px;color:#555}.ok{color:#1b5e20;font-weight:bold}.warn{color:#e65100;font-weight:bold}.bad{color:#b71c1c;font-weight:bold}.banner{background:#ffebee;border:2px solid #b71c1c;color:#b71c1c;padding:8px;margin:8px 0;font-weight:bold}.sev-SEVERE{color:#4a148c;font-weight:bold}.sev-HIGH{color:#b71c1c;font-weight:bold}.sev-ELEVATED{color:#e65100;font-weight:bold}.legend span{display:inline-block;padding:1px 6px;margin-right:4px;font-size:11px;border:1px solid #999}</style></head><body>';\nhtml += '<h1>Lahore region: where to look first</h1>';\nhtml += '<div>Last successful detection: <b>' + esc(lastUpdated ? local(lastUpdated) : 'never') + '</b>' + (lastUpdated ? ' (' + Math.round(ageH(lastUpdated) * 10) / 10 + ' h ago)' : '') + ' - page refreshes every 5 minutes</div>';\nhtml += banner;\nhtml += '<h2>Ranked hotspots</h2><table><tr><th>#</th><th>Level</th><th>PM2.5</th><th>Likely source</th><th>Evidence</th><th>Location</th></tr>' + tbl + '</table>';\nhtml += '<h2>Map</h2>' + svg;\nhtml += '<div class=\"legend small\">Grid PM2.5: <span style=\"background:#8bc34a\">&lt;35</span><span style=\"background:#ffeb3b\">35-55</span><span style=\"background:#ff9800\">55-100</span><span style=\"background:#f44336\">100-150</span><span style=\"background:#8e24aa;color:#fff\">150+</span> Orange dots = fires (36 h). Numbered rings = ranked hotspots.</div>';\nhtml += '<h2>12-hour forecast (Lahore centre)</h2>' + fcHtml;\nhtml += '<h2>Data source health</h2><table><tr><th>Source</th><th>Status</th><th>Last pull</th><th>Records</th><th>Message</th></tr>' + srcHtml + '</table>';\nhtml += '<h2>Read this first</h2><p class=\"small\">Research prototype built on public data only; not an official government system. Satellites and models are coarse and clouds or haze can hide fires, so results point to an area and cannot prove that a specific business broke the law. Source labels are rule-based estimates marked likely or possible. Every flag must be confirmed by field inspection before any action.</p>';\nhtml += '</body></html>';\nreturn [{ json: { html: html } }];"
+      },
+      "id": "0152d7ef-1d8f-4e35-9699-a1db298d6c21",
+      "name": "Render Dashboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "fd6d5c9c-ec6d-4642-b913-8652a62329d1",
+      "name": "Send Dashboard Page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        976,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Officer Dashboard Request": {
+      "main": [
+        [
+          {
+            "node": "Read Hotspots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Hotspots": {
+      "main": [
+        [
+          {
+            "node": "Read Observations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Observations": {
+      "main": [
+        [
+          {
+            "node": "Read Fires",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Fires": {
+      "main": [
+        [
+          {
+            "node": "Read Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Forecast": {
+      "main": [
+        [
+          {
+            "node": "Read Pull Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Pull Log": {
+      "main": [
+        [
+          {
+            "node": "Render Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Send Dashboard Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8460c1dd-4891-4ed0-94d7-d24f40ab8324",
+  "meta": {
+    "instanceId": "f5edcadffac9b96e337b4d063f2d82e4614b33770dda19b26f9e5d432da89108"
+  },
+  "nodeGroups": [
+    {
+      "id": "02f36eb9-5dbe-4d8f-ade9-f7507e31409b",
+      "name": "Load latest results",
+      "nodeIds": [
+        "f4c05bde-2e82-4757-b8ca-e4f3e830830b",
+        "72d11ff2-2f9b-4ca7-b6f8-bd0a4ff72828",
+        "c40c6224-336b-46cc-abb8-eebc5411e623",
+        "f632fc5b-24e0-456e-8e66-c76a3aefb159",
+        "25e9c15c-6c0e-4233-a9d9-f214a96188ca"
+      ],
+      "description": "On each page request, reads the newest hotspots, grid readings, fires, forecast and pull log from the data tables"
+    }
+  ],
+  "id": "kA1kfH65u3kN6JHX",
+  "tags": []
+}

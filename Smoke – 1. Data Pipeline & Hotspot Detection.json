@@ -1,0 +1,1106 @@
+{
+  "name": "Smoke – 1. Data Pipeline & Hotspot Detection",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "id": "4217dbb9-054e-4daa-ad1f-813b272772db",
+      "name": "Hourly Pipeline Run",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "run_id",
+              "type": "string",
+              "value": "={{ $now.toFormat(\"yyyyLLddHHmm\") }}"
+            },
+            {
+              "id": "a2",
+              "name": "run_at",
+              "type": "string",
+              "value": "={{ $now.toUTC().toISO() }}"
+            },
+            {
+              "id": "a3",
+              "name": "firms_map_key",
+              "type": "string",
+              "value": "1666702e83aafae5f1928246350f17bb"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a46470df-1be2-444e-a1f9-b4a3c3eeeb55",
+      "name": "Run Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 5x5 monitoring grid over Lahore (about 14 km cells)\nvar cells = [];\nvar lats = [];\nvar lons = [];\nfor (var r = 0; r < 5; r++) {\n  for (var c = 0; c < 5; c++) {\n    var lat = Math.round((31.25 + r * 0.125) * 1000) / 1000;\n    var lon = Math.round((74.0 + c * 0.15) * 1000) / 1000;\n    cells.push({ id: 'L' + r + c, lat: lat, lon: lon });\n    lats.push(lat);\n    lons.push(lon);\n  }\n}\nreturn [{ json: { cells: cells, lats: lats.join(','), lons: lons.join(',') } }];"
+      },
+      "id": "9ebd1cd0-7b5e-4d22-b735-01278fc7a1aa",
+      "name": "Build Grid",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://air-quality-api.open-meteo.com/v1/air-quality?latitude={{ $json.lats }}&longitude={{ $json.lons }}&current=pm10,pm2_5,nitrogen_dioxide,aerosol_optical_depth&timezone=GMT",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "22d07f7a-0c63-4e0e-83d8-05cce3480590",
+      "name": "Fetch Air Quality",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        720,
+        224
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{ $(\"Build Grid\").first().json.lats }}&longitude={{ $(\"Build Grid\").first().json.lons }}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&wind_speed_unit=ms&timezone=GMT",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "7c1024e7-1ccc-48aa-8065-f470cf4b0004",
+      "name": "Fetch Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        944,
+        224
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://firms.modaps.eosdis.nasa.gov/api/area/csv/{{ $(\"Run Config\").first().json.firms_map_key }}/VIIRS_SNPP_NRT/73.3,30.7,75.3,32.4/2",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 45000
+        }
+      },
+      "id": "f68feada-15e4-4ea8-8f77-02d1d466f065",
+      "name": "Fetch Fires",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1168,
+        224
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "h6A6b6YqQBIzW5c5",
+          "cachedResultName": "smoke_observations"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "source",
+              "keyValue": "openaq"
+            }
+          ]
+        },
+        "limit": 300,
+        "orderBy": true
+      },
+      "id": "428e4386-c45a-48fa-888f-6082b3239e9f",
+      "name": "Read Ground Sensors",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        800,
+        224
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "06Txu5eZL5aZGxdF",
+          "cachedResultName": "smoke_facilities"
+        },
+        "returnAll": true
+      },
+      "id": "d859bbbd-5655-4716-9dfa-4d3f4d0e47e1",
+      "name": "Read Facilities",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1024,
+        224
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "var run = $('Run Config').first().json;\nvar runAt = run.run_at;\nvar runId = run.run_id;\nvar secret = run.firms_map_key || '';\nvar out = [];\nvar nowMs = Date.now();\nvar R = 6371;\n\nfunction rad(d) { return d * Math.PI / 180; }\nfunction dist(a, b, c, d) {\n  var dLat = rad(c - a);\n  var dLon = rad(d - b);\n  var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(rad(a)) * Math.cos(rad(c)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);\n  return 2 * R * Math.asin(Math.sqrt(x));\n}\nfunction bearing(a, b, c, d) {\n  var y = Math.sin(rad(d - b)) * Math.cos(rad(c));\n  var x = Math.cos(rad(a)) * Math.sin(rad(c)) - Math.sin(rad(a)) * Math.cos(rad(c)) * Math.cos(rad(d - b));\n  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;\n}\nfunction angDiff(a, b) { var d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; }\nfunction num(v) {\n  if (v === null || v === undefined || v === '') return null;\n  var n = Number(v);\n  return isFinite(n) ? n : null;\n}\nfunction r1(v) { return v === null ? null : Math.round(v * 10) / 10; }\nfunction safe(name) {\n  try { return $(name).all().map(function (i) { return i.json; }); } catch (e) { return []; }\n}\nfunction clean(msg) {\n  var s = String(msg || '');\n  if (secret) s = s.split(secret).join('***');\n  return s.substring(0, 300);\n}\nfunction log(source, status, records, message) {\n  out.push({ json: { kind: 'log', run_at: runAt, run_id: runId, source: source, status: status, records: records, message: message } });\n}\nfunction sevOf(p) { return p >= 150 ? 'severe' : p >= 100 ? 'high' : p >= 55 ? 'elevated' : 'normal'; }\nfunction downgrade(c) { return c === 'high' ? 'medium' : 'low'; }\n\n// ---------- 1. Air quality + weather (validated) ----------\nvar cells = $('Build Grid').first().json.cells;\nvar aq = safe('Fetch Air Quality');\nvar wx = safe('Fetch Weather');\nvar obs = [];\nvar removed = 0;\nvar stale = 0;\nfor (var i = 0; i < cells.length; i++) {\n  var a = aq[i] && aq[i].current ? aq[i].current : null;\n  var w = wx[i] && wx[i].current ? wx[i].current : null;\n  if (!a) continue;\n  var pm25 = num(a.pm2_5);\n  if (pm25 === null || pm25 < 0 || pm25 > 1500) { removed++; continue; }\n  var t = Date.parse(a.time + ':00Z');\n  if (!isFinite(t)) { removed++; continue; }\n  if ((nowMs - t) / 3600000 > 4) stale++;\n  obs.push({\n    cell_id: cells[i].id, lat: cells[i].lat, lon: cells[i].lon, pm25: pm25,\n    pm10: num(a.pm10), no2: num(a.nitrogen_dioxide), aod: num(a.aerosol_optical_depth),\n    temp_c: w ? num(w.temperature_2m) : null, humidity: w ? num(w.relative_humidity_2m) : null,\n    wind_speed: w ? num(w.wind_speed_10m) : null, wind_dir: w ? num(w.wind_direction_10m) : null,\n    observed_at: new Date(t).toISOString()\n  });\n}\nif (obs.length === 0) {\n  var aqErr = aq.length && aq[0].error ? clean(JSON.stringify(aq[0].error)) : 'No valid air quality records returned';\n  log('open-meteo-cams', 'failed', 0, aqErr);\n} else if (stale === obs.length) {\n  log('open-meteo-cams', 'stale', obs.length, 'All records older than 4 hours; not treated as current. Removed invalid: ' + removed);\n} else {\n  log('open-meteo-cams', 'ok', obs.length, 'Valid cells: ' + obs.length + ', removed invalid: ' + removed);\n}\nvar wxCount = 0;\nfor (var k = 0; k < wx.length; k++) { if (wx[k] && wx[k].current) wxCount++; }\nlog('open-meteo-weather', wxCount > 0 ? 'ok' : 'failed', wxCount, wxCount > 0 ? 'Weather cells: ' + wxCount : 'No weather records returned (attribution has no wind data)');\nvar aqFresh = obs.length > 0 && stale < obs.length;\n\n// ---------- 2. Fires (FIRMS) ----------\nvar frRaw = safe('Fetch Fires');\nvar txt = frRaw.length && typeof frRaw[0].data === 'string' ? frRaw[0].data : '';\nvar fires = [];\nif (txt.indexOf('latitude') !== 0) {\n  var frMsg = frRaw.length && frRaw[0].error ? clean(JSON.stringify(frRaw[0].error)) : clean(txt || 'Empty response');\n  log('nasa-firms', 'failed', 0, frMsg);\n} else {\n  var lines = txt.trim().split(/\\r?\\n/);\n  var hdr = lines[0].split(',');\n  var ix = {};\n  for (var h = 0; h < hdr.length; h++) ix[hdr[h].trim()] = h;\n  for (var l = 1; l < lines.length; l++) {\n    var p = lines[l].split(',');\n    var flat = num(p[ix.latitude]);\n    var flon = num(p[ix.longitude]);\n    if (flat === null || flon === null) continue;\n    var conf = String(p[ix.confidence] || '').trim().toLowerCase();\n    if (conf === 'l' || conf === 'low') continue;\n    var hhmm = String(p[ix.acq_time] || '0000');\n    while (hhmm.length < 4) hhmm = '0' + hhmm;\n    var ft = Date.parse(p[ix.acq_date] + 'T' + hhmm.substring(0, 2) + ':' + hhmm.substring(2, 4) + ':00Z');\n    if (!isFinite(ft) || (nowMs - ft) > 48 * 3600000) continue;\n    fires.push({\n      fire_key: flat + '_' + flon + '_' + p[ix.acq_date] + '_' + hhmm,\n      acq_time: new Date(ft).toISOString(), lat: flat, lon: flon,\n      frp: num(p[ix.frp]) || 0, confidence: conf, satellite: String(p[ix.satellite] || '').trim(), ageH: (nowMs - ft) / 3600000\n    });\n  }\n  log('nasa-firms', 'ok', fires.length, 'Active fire detections (last 48h, non-low confidence): ' + fires.length);\n}\nvar recent = fires.filter(function (f) { return f.ageH <= 36; }).slice(0, 3000);\nvar clusters = [];\nfor (var q = 0; q < recent.length; q++) {\n  var f = recent[q];\n  var hit = null;\n  for (var cI = 0; cI < clusters.length; cI++) {\n    if (dist(clusters[cI].lat, clusters[cI].lon, f.lat, f.lon) <= 3) { hit = clusters[cI]; break; }\n  }\n  if (hit) {\n    hit.n++; hit.frp += f.frp;\n    hit.lat = (hit.lat * (hit.n - 1) + f.lat) / hit.n;\n    hit.lon = (hit.lon * (hit.n - 1) + f.lon) / hit.n;\n  } else { clusters.push({ lat: f.lat, lon: f.lon, n: 1, frp: f.frp }); }\n}\nvar storeFires = fires.slice().sort(function (x, y) { return y.frp - x.frp; }).slice(0, 400);\nfor (var sf = 0; sf < storeFires.length; sf++) {\n  var s = storeFires[sf];\n  out.push({ json: { kind: 'fire', fire_key: s.fire_key, acq_time: s.acq_time, lat: s.lat, lon: s.lon, frp: s.frp, confidence: s.confidence, satellite: s.satellite } });\n}\n\n// ---------- 3. Facilities (OSM) and ground sensors (OpenAQ) ----------\nvar fac = safe('Read Facilities').filter(function (x) { return num(x.lat) !== null && num(x.lon) !== null; });\nvar ground = [];\nvar seenG = {};\nvar gRows = safe('Read Ground Sensors');\nfor (var g = 0; g < gRows.length; g++) {\n  var gr = gRows[g];\n  if (gr.source !== 'openaq' || num(gr.pm25) === null || seenG[gr.cell_id]) continue;\n  var gt = Date.parse(gr.observed_at);\n  if (!isFinite(gt) || (nowMs - gt) > 3 * 3600000) continue;\n  seenG[gr.cell_id] = true;\n  ground.push({ lat: Number(gr.lat), lon: Number(gr.lon), pm25: Number(gr.pm25) });\n}\n\n// ---------- 4. Hotspots + rule-based attribution ----------\nvar sorted = obs.map(function (o) { return o.pm25; }).sort(function (x, y) { return x - y; });\nvar median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;\nvar month = new Date().getUTCMonth() + 1;\nvar burningSeason = [10, 11, 12, 4, 5].indexOf(month) !== -1;\nvar state = $getWorkflowStaticData('global');\nstate.alerts = state.alerts || {};\nvar hotspots = [];\nif (aqFresh) {\n  for (var o2 = 0; o2 < obs.length; o2++) {\n    var ob = obs[o2];\n    var sev = sevOf(ob.pm25);\n    if (sev === 'normal') continue;\n    if (!(ob.pm25 >= 100 || ob.pm25 >= 1.1 * median)) continue;\n    var radius = ob.wind_speed !== null ? Math.min(80, Math.max(30, ob.wind_speed * 3.6 * 6)) : 40;\n    var up = 0;\n    var near = 0;\n    var upClusters = 0;\n    for (var fi = 0; fi < recent.length; fi++) {\n      var fx = recent[fi];\n      var d = dist(ob.lat, ob.lon, fx.lat, fx.lon);\n      if (d <= 15) near++;\n      if (ob.wind_dir !== null && d <= radius && angDiff(bearing(ob.lat, ob.lon, fx.lat, fx.lon), ob.wind_dir) <= 50) up++;\n    }\n    for (var ci = 0; ci < clusters.length; ci++) {\n      var cl = clusters[ci];\n      if (ob.wind_dir !== null && dist(ob.lat, ob.lon, cl.lat, cl.lon) <= radius && angDiff(bearing(ob.lat, ob.lon, cl.lat, cl.lon), ob.wind_dir) <= 50) upClusters++;\n    }\n    var nFac = 0;\n    for (var fa = 0; fa < fac.length; fa++) {\n      if (dist(ob.lat, ob.lon, Number(fac[fa].lat), Number(fac[fa].lon)) <= 5) nFac++;\n    }\n    var label = 'Undetermined (regional/transported smoke, traffic or other)';\n    var conf = 'low';\n    if (up >= 3 && burningSeason) { label = 'Likely crop burning'; conf = up >= 8 ? 'high' : 'medium'; }\n    else if ((up >= 1 || near >= 1) && !(nFac >= 15 && up < 3)) { label = 'Possible crop/biomass burning'; conf = 'low'; }\n    else if (nFac >= 5 && near === 0) { label = 'Possible industrial source'; conf = nFac >= 15 ? 'medium' : 'low'; }\n    var gBest = null;\n    var gDist = 999;\n    for (var gi = 0; gi < ground.length; gi++) {\n      var gd = dist(ob.lat, ob.lon, ground[gi].lat, ground[gi].lon);\n      if (gd <= 15 && gd < gDist) { gDist = gd; gBest = ground[gi]; }\n    }\n    var agree = 'no sensor nearby';\n    var gPm = null;\n    if (gBest) {\n      gPm = r1(gBest.pm25);\n      var ratio = gBest.pm25 / ob.pm25;\n      agree = ratio >= 0.6 && ratio <= 1.5 ? 'agrees' : (ratio > 1.5 ? 'ground higher' : 'ground lower');\n      if (agree === 'ground lower') conf = downgrade(conf);\n    }\n    var score = (sev === 'severe' ? 60 : sev === 'high' ? 40 : 20) + Math.min(ob.pm25, 300) / 10 + Math.min(up, 20) * 1.5 + Math.min(nFac, 20) * 0.5 + (agree === 'agrees' ? 5 : 0);\n    var ev = 'PM2.5 ' + r1(ob.pm25) + ' ug/m3 (regional median ' + r1(median) + '). ';\n    ev += ob.wind_dir !== null ? ('Wind from ' + Math.round(ob.wind_dir) + ' deg at ' + r1(ob.wind_speed) + ' m/s. ') : 'No wind data. ';\n    ev += up + ' fire detections (' + upClusters + ' clusters) upwind within ' + Math.round(radius) + ' km; ' + near + ' within 15 km. ';\n    ev += nFac + ' mapped industrial/kiln sites within 5 km. ';\n    if (ob.no2 !== null) ev += 'NO2 ' + r1(ob.no2) + ' ug/m3. ';\n    ev += 'Ground sensor: ' + agree + (gPm !== null ? (' (' + gPm + ' ug/m3)') : '') + '. ';\n    ev += burningSeason ? 'Burning season. ' : 'Outside main burning season. ';\n    ev += 'Satellite/model estimate: confirm by field inspection.';\n    var alerted = false;\n    if ((sev === 'high' || sev === 'severe') && (!state.alerts[ob.cell_id] || nowMs - state.alerts[ob.cell_id] > 6 * 3600000)) {\n      alerted = true;\n      state.alerts[ob.cell_id] = nowMs;\n    }\n    hotspots.push({\n      detected_at: runAt, run_id: runId, cell_id: ob.cell_id, lat: ob.lat, lon: ob.lon, pm25: r1(ob.pm25), severity: sev,\n      priority_score: r1(score), attribution: label, attribution_confidence: conf, fires_upwind: up, fires_nearby: near,\n      facilities_nearby: nFac, ground_pm25: gPm, ground_agreement: agree, evidence: ev, alerted: alerted\n    });\n  }\n}\nhotspots.sort(function (x, y) { return y.priority_score - x.priority_score; });\nfor (var hs = 0; hs < hotspots.length; hs++) { var row = hotspots[hs]; row.kind = 'hotspot'; out.push({ json: row }); }\nlog('detection', aqFresh ? 'ok' : 'skipped', hotspots.length, aqFresh ? ('Hotspots flagged: ' + hotspots.length + '; fire clusters: ' + clusters.length + '; facilities loaded: ' + fac.length + '; ground sensors: ' + ground.length) : 'No fresh air quality data, so no hotspots were produced');\n\n// ---------- 5. Observations ----------\nfor (var ob2 = 0; ob2 < obs.length; ob2++) {\n  var x2 = obs[ob2];\n  out.push({ json: { kind: 'obs', observed_at: x2.observed_at, cell_id: x2.cell_id, lat: x2.lat, lon: x2.lon, pm25: x2.pm25, pm10: x2.pm10, no2: x2.no2, aod: x2.aod, temp_c: x2.temp_c, humidity: x2.humidity, wind_speed: x2.wind_speed, wind_dir: x2.wind_dir, source: 'open-meteo-cams' } });\n}\nreturn out;"
+      },
+      "id": "09a41d32-f86e-4c18-ac50-6d086a95ac9f",
+      "name": "Detect & Attribute",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "obs"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "observations"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "fire"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "fires"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "hotspot"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "hotspots"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "log"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "log"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f55406ec-0e62-48e2-ad95-10118d1d72cf",
+      "name": "Route Records",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "h6A6b6YqQBIzW5c5",
+          "cachedResultName": "smoke_observations"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "observed_at": "={{ $json.observed_at }}",
+            "cell_id": "={{ $json.cell_id }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "pm25": "={{ $json.pm25 }}",
+            "pm10": "={{ $json.pm10 }}",
+            "no2": "={{ $json.no2 }}",
+            "aod": "={{ $json.aod }}",
+            "temp_c": "={{ $json.temp_c }}",
+            "humidity": "={{ $json.humidity }}",
+            "wind_speed": "={{ $json.wind_speed }}",
+            "wind_dir": "={{ $json.wind_dir }}",
+            "source": "={{ $json.source }}"
+          },
+          "schema": [
+            {
+              "id": "observed_at",
+              "displayName": "observed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cell_id",
+              "displayName": "cell_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm25",
+              "displayName": "pm25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm10",
+              "displayName": "pm10",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "no2",
+              "displayName": "no2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "aod",
+              "displayName": "aod",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temp_c",
+              "displayName": "temp_c",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "humidity",
+              "displayName": "humidity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "wind_speed",
+              "displayName": "wind_speed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "wind_dir",
+              "displayName": "wind_dir",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "optimizeBulk": true
+        }
+      },
+      "id": "3537efb6-2800-4f1b-9121-ebea89a41c09",
+      "name": "Save Observations",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "BZNhutm1KgkTv0rS",
+          "cachedResultName": "smoke_fires"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "fire_key",
+              "keyValue": "={{ $json.fire_key }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fire_key": "={{ $json.fire_key }}",
+            "acq_time": "={{ $json.acq_time }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "frp": "={{ $json.frp }}",
+            "confidence": "={{ $json.confidence }}",
+            "satellite": "={{ $json.satellite }}"
+          },
+          "matchingColumns": [
+            "fire_key"
+          ],
+          "schema": [
+            {
+              "id": "fire_key",
+              "displayName": "fire_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "acq_time",
+              "displayName": "acq_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "frp",
+              "displayName": "frp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "satellite",
+              "displayName": "satellite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "51f36274-1c9d-4c5a-8c20-18dfce6060a5",
+      "name": "Save Fire Detections",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "v4QXF25aDnMTm9tg",
+          "cachedResultName": "smoke_hotspots"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "detected_at": "={{ $json.detected_at }}",
+            "run_id": "={{ $json.run_id }}",
+            "cell_id": "={{ $json.cell_id }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "pm25": "={{ $json.pm25 }}",
+            "severity": "={{ $json.severity }}",
+            "priority_score": "={{ $json.priority_score }}",
+            "attribution": "={{ $json.attribution }}",
+            "attribution_confidence": "={{ $json.attribution_confidence }}",
+            "fires_upwind": "={{ $json.fires_upwind }}",
+            "fires_nearby": "={{ $json.fires_nearby }}",
+            "facilities_nearby": "={{ $json.facilities_nearby }}",
+            "ground_pm25": "={{ $json.ground_pm25 }}",
+            "ground_agreement": "={{ $json.ground_agreement }}",
+            "evidence": "={{ $json.evidence }}",
+            "alerted": "={{ $json.alerted }}"
+          },
+          "schema": [
+            {
+              "id": "detected_at",
+              "displayName": "detected_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "run_id",
+              "displayName": "run_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cell_id",
+              "displayName": "cell_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm25",
+              "displayName": "pm25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority_score",
+              "displayName": "priority_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "attribution",
+              "displayName": "attribution",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "attribution_confidence",
+              "displayName": "attribution_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fires_upwind",
+              "displayName": "fires_upwind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fires_nearby",
+              "displayName": "fires_nearby",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "facilities_nearby",
+              "displayName": "facilities_nearby",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ground_pm25",
+              "displayName": "ground_pm25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ground_agreement",
+              "displayName": "ground_agreement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "evidence",
+              "displayName": "evidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "alerted",
+              "displayName": "alerted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "optimizeBulk": true
+        }
+      },
+      "id": "42d1beb4-9937-4809-afbe-b37ece2e7da8",
+      "name": "Save Hotspots",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "voAbz9aKaSqfrnLq",
+          "cachedResultName": "smoke_pull_log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_at": "={{ $json.run_at }}",
+            "run_id": "={{ $json.run_id }}",
+            "source": "={{ $json.source }}",
+            "status": "={{ $json.status }}",
+            "records": "={{ $json.records }}",
+            "message": "={{ $json.message }}"
+          },
+          "schema": [
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "run_id",
+              "displayName": "run_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "records",
+              "displayName": "records",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "76a40c6a-9acb-4fd2-bb79-2efb031ef643",
+      "name": "Save Pull Log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "var rows = $('Detect & Attribute').all().map(function (i) { return i.json; }).filter(function (j) { return j.kind === 'hotspot' && j.alerted === true; });\nif (rows.length === 0) return [];\nrows.sort(function (a, b) { return b.priority_score - a.priority_score; });\nvar top = rows.slice(0, 10);\nvar html = '<h2>Smoke hotspot alert (research prototype)</h2>';\nhtml += '<p>' + rows.length + ' new high/severe hotspot(s) in the Lahore region. Ranked by priority. Estimates come from satellite/model data and must be confirmed by field inspection before any enforcement action.</p><ol>';\nfor (var i = 0; i < top.length; i++) {\n  var t = top[i];\n  html += '<li><b>' + t.severity.toUpperCase() + '</b> - PM2.5 ' + t.pm25 + ' ug/m3 at ' + t.lat + ', ' + t.lon + '<br>';\n  html += 'Likely source: ' + t.attribution + ' (confidence: ' + t.attribution_confidence + ')<br>';\n  html += '<small>' + t.evidence + '</small></li>';\n}\nhtml += '</ol>';\nreturn [{ json: { subject: 'Smoke alert: ' + rows.length + ' new high-priority hotspot(s) near Lahore', html: html } }];"
+      },
+      "id": "50fbd39f-d030-4428-88b0-a147df14a250",
+      "name": "Build Alert Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        320
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "sendTo": "naveedshahid275@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "ca5898f3-094c-425b-96a5-f313bb189303",
+      "name": "Email Alert to Test User",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1552,
+        320
+      ],
+      "webhookId": "f9010038-3c2a-4016-a304-b859a340d78d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "zJeffJvKujvrZWS4",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Hourly Pipeline Run": {
+      "main": [
+        [
+          {
+            "node": "Run Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Config": {
+      "main": [
+        [
+          {
+            "node": "Build Grid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Grid": {
+      "main": [
+        [
+          {
+            "node": "Fetch Air Quality",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Air Quality": {
+      "main": [
+        [
+          {
+            "node": "Fetch Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weather": {
+      "main": [
+        [
+          {
+            "node": "Fetch Fires",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Fires": {
+      "main": [
+        [
+          {
+            "node": "Read Ground Sensors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Ground Sensors": {
+      "main": [
+        [
+          {
+            "node": "Read Facilities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Facilities": {
+      "main": [
+        [
+          {
+            "node": "Detect & Attribute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect & Attribute": {
+      "main": [
+        [
+          {
+            "node": "Route Records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Alert Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Records": {
+      "main": [
+        [
+          {
+            "node": "Save Observations",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Fire Detections",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Hotspots",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Pull Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Digest": {
+      "main": [
+        [
+          {
+            "node": "Email Alert to Test User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c36a77fd-ec0f-46fe-961b-5566c00f5bbe",
+  "meta": {
+    "instanceId": "f5edcadffac9b96e337b4d063f2d82e4614b33770dda19b26f9e5d432da89108"
+  },
+  "nodeGroups": [
+    {
+      "id": "c6631991-f63d-44fb-a3bd-201ededc43d2",
+      "name": "Collect open data",
+      "nodeIds": [
+        "a46470df-1be2-444e-a1f9-b4a3c3eeeb55",
+        "9ebd1cd0-7b5e-4d22-b735-01278fc7a1aa",
+        "22d07f7a-0c63-4e0e-83d8-05cce3480590",
+        "7c1024e7-1ccc-48aa-8065-f470cf4b0004",
+        "f68feada-15e4-4ea8-8f77-02d1d466f065"
+      ],
+      "description": "Hourly: pulls CAMS air quality, weather and NASA fire detections for a 25-cell Lahore grid"
+    },
+    {
+      "id": "60239595-927a-44b5-92c8-ba59d347e4e3",
+      "name": "Rank hotspots",
+      "nodeIds": [
+        "428e4386-c45a-48fa-888f-6082b3239e9f",
+        "d859bbbd-5655-4716-9dfa-4d3f4d0e47e1",
+        "09a41d32-f86e-4c18-ac50-6d086a95ac9f"
+      ],
+      "description": "Checks data, clusters fires, flags hotspots, estimates the likely source and ranks them for officers"
+    },
+    {
+      "id": "6d5bc200-0046-4c37-8d07-a08262f38a15",
+      "name": "Store results",
+      "nodeIds": [
+        "f55406ec-0e62-48e2-ad95-10118d1d72cf",
+        "3537efb6-2800-4f1b-9121-ebea89a41c09",
+        "51f36274-1c9d-4c5a-8c20-18dfce6060a5",
+        "42d1beb4-9937-4809-afbe-b37ece2e7da8",
+        "76a40c6a-9acb-4fd2-bb79-2efb031ef643"
+      ],
+      "description": "Saves observations, fires, hotspots and a per-source success/failure log to data tables"
+    },
+    {
+      "id": "49dfad7b-3bc4-4b38-b34f-89b2727c2e43",
+      "name": "Alert officers",
+      "nodeIds": [
+        "50fbd39f-d030-4428-88b0-a147df14a250",
+        "ca5898f3-094c-425b-96a5-f313bb189303"
+      ],
+      "description": "Emails one digest of new high or severe hotspots, at most once per cell every 6 hours"
+    }
+  ],
+  "id": "SazH0YvUR4YiM24C",
+  "tags": []
+}

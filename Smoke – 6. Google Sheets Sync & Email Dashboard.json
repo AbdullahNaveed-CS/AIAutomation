@@ -1,0 +1,1860 @@
+{
+  "name": "Smoke – 6. Google Sheets Sync & Email Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7,18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "431f46e1-9958-435f-9751-291956c99704",
+      "name": "Twice Daily 07:00 and 18:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-recipient",
+              "name": "recipient",
+              "value": "naveedshahid275@gmail.com",
+              "type": "string"
+            },
+            {
+              "id": "cfg-sheet",
+              "name": "spreadsheet_id",
+              "value": "1YCid037Hzmi8sFNWZaDNGpIUas1Z-iZogNVmBlmvcgw",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "83a3a7dc-dd78-4d4f-860f-57257038eb62",
+      "name": "Run Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        272,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "v4QXF25aDnMTm9tg",
+          "cachedResultName": "smoke_hotspots"
+        },
+        "limit": 1000,
+        "orderBy": true
+      },
+      "id": "a52de2db-e845-4960-9b5f-54f4ec887d18",
+      "name": "Read Hotspots",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "h6A6b6YqQBIzW5c5",
+          "cachedResultName": "smoke_observations"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "source",
+              "keyValue": "open-meteo-cams"
+            }
+          ]
+        },
+        "limit": 500,
+        "orderBy": true
+      },
+      "id": "98bf7210-a372-4369-a372-8276fe37cdf4",
+      "name": "Read Grid Readings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "h6A6b6YqQBIzW5c5",
+          "cachedResultName": "smoke_observations"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "source",
+              "keyValue": "openaq"
+            }
+          ]
+        },
+        "limit": 300,
+        "orderBy": true
+      },
+      "id": "764c59b4-07b8-4f4a-96eb-c9054346825f",
+      "name": "Read Ground Sensors",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "BZNhutm1KgkTv0rS",
+          "cachedResultName": "smoke_fires"
+        },
+        "limit": 500,
+        "orderBy": true
+      },
+      "id": "2b7d7465-2f5c-48c2-b16e-0ee23168de76",
+      "name": "Read Fires",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1168,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "0PhAoNd47PlDeTP9",
+          "cachedResultName": "smoke_forecasts"
+        },
+        "orderBy": true
+      },
+      "id": "6f4bef12-ef80-4446-a282-45909924f312",
+      "name": "Read Forecast",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "06Txu5eZL5aZGxdF",
+          "cachedResultName": "smoke_facilities"
+        },
+        "returnAll": true
+      },
+      "id": "6a69a634-8b0a-47f3-ac69-f3bac9051556",
+      "name": "Read Facilities",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1616,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "voAbz9aKaSqfrnLq",
+          "cachedResultName": "smoke_pull_log"
+        },
+        "limit": 200,
+        "orderBy": true
+      },
+      "id": "7d724e50-0da8-4103-aada-10d0fc72bba8",
+      "name": "Read Pull Log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1840,
+        128
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "function rows(name) {\n  try { return $(name).all().map(function (i) { return i.json; }).filter(function (j) { return j && j.id !== undefined; }); } catch (e) { return []; }\n}\nfunction esc(s) { return String(s === null || s === undefined ? '' : s).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('\"').join('&quot;'); }\nfunction num(v) { var n = Number(v); return (v === null || v === undefined || v === '' || !isFinite(n)) ? null : n; }\nfunction fmt(v, d) { var n = num(v); return n === null ? 'n/a' : n.toFixed(d === undefined ? 0 : d); }\nvar now = Date.now();\nfunction ageH(iso) { var t = Date.parse(iso); return isFinite(t) ? (now - t) / 3600000 : null; }\nfunction local(iso) { var t = Date.parse(iso); if (!isFinite(t)) return 'n/a'; return new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Karachi', dateStyle: 'medium', timeStyle: 'short' }) + ' PKT'; }\n\nvar cfg = $('Run Config').first().json;\nvar hot = rows('Read Hotspots');\nvar cams = rows('Read Grid Readings');\nvar aq = rows('Read Ground Sensors');\nvar fires = rows('Read Fires');\nvar fc = rows('Read Forecast');\nvar logs = rows('Read Pull Log');\n\nvar CATS = [\n  [12, 'Good', '#2e7d32', '#e8f5e9', 'Air is fine for everyone.'],\n  [35.5, 'Moderate', '#8a6d00', '#fffde7', 'Very sensitive people should avoid long hard exercise outdoors.'],\n  [55.5, 'Unhealthy for sensitive groups', '#e65100', '#fff3e0', 'Children, elderly people, pregnant women and anyone with asthma or heart disease should stay indoors.'],\n  [150.5, 'Unhealthy', '#c62828', '#ffebee', 'Everyone should cut down time outdoors. Wear an N95 mask if you must go out.'],\n  [250.5, 'Very unhealthy', '#6a1b9a', '#f3e5f5', 'Avoid going outside. Keep windows closed.'],\n  [1000000, 'Hazardous', '#4a148c', '#ede7f6', 'Emergency conditions. Stay indoors and use a mask outside.']\n];\nfunction cat(p) {\n  if (p === null) return { name: 'No current data', color: '#616161', bg: '#eeeeee', advice: 'No fresh reading is available right now.' };\n  for (var i = 0; i < CATS.length; i++) { if (p < CATS[i][0]) return { name: CATS[i][1], color: CATS[i][2], bg: CATS[i][3], advice: CATS[i][4] }; }\n  return { name: 'Hazardous', color: '#4a148c', bg: '#ede7f6', advice: '' };\n}\nfunction badge(p) { var c = cat(p); return '<span style=\"background:' + c.color + ';color:#fff;padding:2px 8px;border-radius:10px;font-size:12px;white-space:nowrap\">' + esc(c.name) + '</span>'; }\n\n// Place in plain words, relative to central Lahore\nvar LAT0 = 31.52, LON0 = 74.35;\nfunction place(lat, lon) {\n  var la = num(lat), lo = num(lon);\n  if (la === null || lo === null) return 'Unknown location';\n  var dn = (la - LAT0) * 111, de = (lo - LON0) * 95;\n  var d = Math.sqrt(dn * dn + de * de);\n  if (d < 6) return 'Central Lahore';\n  var ang = Math.atan2(de, dn) * 180 / Math.PI; if (ang < 0) ang += 360;\n  var names = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];\n  return Math.round(d) + ' km ' + names[Math.round(ang / 45) % 8] + ' of central Lahore';\n}\nfunction gmap(lat, lon) { return 'https://www.google.com/maps?q=' + lat + ',' + lon; }\n\n// Latest fresh grid reading per cell, latest fresh sensor per station\nfunction latestFresh(list, maxAge, key) {\n  var seen = {}; var out = [];\n  list.slice().sort(function (a, b) { return Date.parse(b.observed_at) - Date.parse(a.observed_at); }).forEach(function (o) {\n    var k = o[key]; if (seen[k]) return; seen[k] = true;\n    var a = ageH(o.observed_at); if (a !== null && a <= maxAge && num(o.pm25) !== null) out.push(o);\n  });\n  return out;\n}\nvar cells = latestFresh(cams, 4, 'cell_id');\nvar sensors = latestFresh(aq, 3, 'cell_id');\n\nvar near = cells.filter(function (c) { return Math.abs(Number(c.lat) - LAT0) <= 0.25 && Math.abs(Number(c.lon) - LON0) <= 0.3; });\nvar basis = near.length ? near : cells;\nvar modelAvg = basis.length ? basis.reduce(function (s, c) { return s + Number(c.pm25); }, 0) / basis.length : null;\nvar sv = sensors.map(function (s) { return Number(s.pm25); }).sort(function (a, b) { return a - b; });\nvar sensorMed = sv.length ? (sv.length % 2 ? sv[(sv.length - 1) / 2] : (sv[sv.length / 2 - 1] + sv[sv.length / 2]) / 2) : null;\nvar headline = sensorMed !== null ? sensorMed : modelAvg;\nvar hc = cat(headline);\n\n// Source health\nvar latest = {};\nlogs.slice().sort(function (a, b) { return Date.parse(b.run_at) - Date.parse(a.run_at); }).forEach(function (l) { if (!latest[l.source]) latest[l.source] = l; });\nvar specs = [\n  ['open-meteo-cams', 'Air quality model (CAMS via Open-Meteo)', 3, true],\n  ['open-meteo-weather', 'Weather and wind (Open-Meteo)', 3, true],\n  ['nasa-firms', 'NASA satellite fire detections', 3, true],\n  ['openaq', 'Ground air-quality sensors (OpenAQ)', 3, false],\n  ['osm-facilities', 'Factory and kiln map (OpenStreetMap)', 240, false],\n  ['detection', 'Hotspot detection', 3, true],\n  ['forecast', '12-hour forecast model', 8, true]\n];\nvar srcRows = ''; var problems = [];\nfor (var s = 0; s < specs.length; s++) {\n  var sp = specs[s]; var l = latest[sp[0]];\n  var state = 'No data yet'; var col = '#c62828'; var when = 'never';\n  if (l) {\n    var a = ageH(l.run_at); when = local(l.run_at);\n    if (l.status === 'ok' && a !== null && a <= sp[2]) { state = 'Working'; col = '#2e7d32'; }\n    else if (l.status === 'ok') { state = 'Out of date (' + Math.round(a) + ' h old)'; col = '#c62828'; }\n    else if (l.status === 'partial') { state = 'Partly working'; col = '#e65100'; }\n    else { state = 'Failed'; col = '#c62828'; }\n  }\n  if (col !== '#2e7d32' && sp[3]) problems.push(sp[1] + ': ' + state);\n  srcRows += '<tr><td style=\"padding:6px;border-bottom:1px solid #eee;font-size:13px\">' + esc(sp[1]) + '</td><td style=\"padding:6px;border-bottom:1px solid #eee;font-size:13px;color:' + col + ';font-weight:bold\">' + esc(state) + '</td><td style=\"padding:6px;border-bottom:1px solid #eee;font-size:12px;color:#666\">' + esc(when) + '</td></tr>';\n}\n\n// Hotspots from latest successful detection only\nvar det = latest['detection'];\nvar detOk = det && det.status === 'ok' && ageH(det.run_at) !== null && ageH(det.run_at) <= 3;\nvar shown = detOk ? hot.filter(function (h) { return h.run_id === det.run_id; }) : [];\nshown.sort(function (x, y) { return Number(y.priority_score) - Number(x.priority_score); });\n\nfunction causeKey(a) {\n  var t = String(a || '').toLowerCase();\n  if (t.indexOf('crop') >= 0 || t.indexOf('biomass') >= 0) return 'burn';\n  if (t.indexOf('kiln') >= 0) return 'kiln';\n  if (t.indexOf('industr') >= 0) return 'ind';\n  return 'unk';\n}\nvar CAUSE = {\n  burn: ['Crop-residue burning', '#e65100', 'Farmers burning leftover rice or wheat stalks. Satellites saw fires upwind of the smoky area.'],\n  kiln: ['Brick kilns', '#6d4c41', 'Brick kilns burning fuel close to the smoky area.'],\n  ind: ['Factories and industry', '#455a64', 'Many industrial sites sit near the smoky area and no nearby fires were seen.'],\n  unk: ['Not clear yet', '#9e9e9e', 'Could be traffic, smoke drifting in from far away, or other local sources. Needs a field check.']\n};\nvar counts = { burn: 0, kiln: 0, ind: 0, unk: 0 };\nshown.forEach(function (h) { counts[causeKey(h.attribution)]++; });\nvar total = shown.length;\nvar causeHtml = '';\nif (total) {\n  ['burn', 'kiln', 'ind', 'unk'].forEach(function (k) {\n    if (!counts[k]) return;\n    var pct = Math.round(counts[k] / total * 100);\n    causeHtml += '<tr><td style=\"padding:8px 0\"><div style=\"font-size:14px;font-weight:bold;color:#222\">' + esc(CAUSE[k][0]) + ' <span style=\"font-weight:normal;color:#666\">- ' + counts[k] + ' of ' + total + ' hotspots (' + pct + '%)</span></div>';\n    causeHtml += '<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:4px 0\"><tr><td width=\"' + pct + '%\" style=\"background:' + CAUSE[k][1] + ';height:12px;font-size:1px;line-height:12px;border-radius:6px\">&nbsp;</td><td style=\"background:#eceff1;height:12px;font-size:1px;line-height:12px\">&nbsp;</td></tr></table>';\n    causeHtml += '<div style=\"font-size:12px;color:#555\">' + esc(CAUSE[k][2]) + '</div></td></tr>';\n  });\n} else {\n  causeHtml = '<tr><td style=\"padding:8px 0;font-size:13px;color:#555\">' + (detOk ? 'No area crossed the smoke-hotspot threshold in the latest check.' : 'No current cause list: the latest hotspot check is missing, failed or out of date. Older results are hidden on purpose so they are not mistaken for current ones.') + '</td></tr>';\n}\n\n// Hotspot cards\nvar hotHtml = '';\nshown.slice(0, 8).forEach(function (h, idx) {\n  var ck = causeKey(h.attribution);\n  var conf = h.attribution_confidence === 'high' ? 'fairly sure' : h.attribution_confidence === 'medium' ? 'moderately sure' : 'not very sure';\n  hotHtml += '<tr><td style=\"padding:10px;border-bottom:1px solid #eee;vertical-align:top;width:34px\"><div style=\"background:' + cat(num(h.pm25)).color + ';color:#fff;border-radius:50%;width:28px;height:28px;line-height:28px;text-align:center;font-weight:bold\">' + (idx + 1) + '</div></td>';\n  hotHtml += '<td style=\"padding:10px;border-bottom:1px solid #eee;vertical-align:top\"><div style=\"font-size:14px;font-weight:bold\">' + esc(place(h.lat, h.lon)) + ' <a href=\"' + esc(gmap(h.lat, h.lon)) + '\" style=\"font-size:12px;font-weight:normal;color:#1565c0\">view on map</a></div>';\n  hotHtml += '<div style=\"margin:3px 0\">' + badge(num(h.pm25)) + ' <span style=\"font-size:12px;color:#555\">PM2.5 ' + fmt(h.pm25) + ' ug/m3</span></div>';\n  hotHtml += '<div style=\"font-size:13px\">Likely cause: <b>' + esc(CAUSE[ck][0]) + '</b> <span style=\"color:#666\">(' + conf + ')</span></div>';\n  hotHtml += '<div style=\"font-size:12px;color:#666;margin-top:2px\">Fires seen upwind: ' + esc(h.fires_upwind) + ' | industrial sites nearby: ' + esc(h.facilities_nearby) + (num(h.ground_pm25) !== null ? ' | nearest ground sensor reads ' + fmt(h.ground_pm25) : '') + (h.ground_agreement ? ' (' + esc(h.ground_agreement) + ')' : '') + '</div></td></tr>';\n});\nif (!hotHtml) hotHtml = '<tr><td style=\"padding:10px;font-size:13px;color:#555\">No hotspots to show right now.</td></tr>';\n\n// Heat grid (email-safe, no images)\nvar latKeys = {}; var lonKeys = {};\ncells.forEach(function (c) { latKeys[Number(c.lat).toFixed(3)] = 1; lonKeys[Number(c.lon).toFixed(3)] = 1; });\nvar lats = Object.keys(latKeys).sort(function (a, b) { return Number(b) - Number(a); });\nvar lons = Object.keys(lonKeys).sort(function (a, b) { return Number(a) - Number(b); });\nvar byPos = {};\ncells.forEach(function (c) { byPos[Number(c.lat).toFixed(3) + '|' + Number(c.lon).toFixed(3)] = c; });\nvar gridHtml = '';\nif (cells.length) {\n  gridHtml = '<table cellpadding=\"0\" cellspacing=\"2\" style=\"margin:0 auto\"><tr><td></td><td colspan=\"' + lons.length + '\" style=\"text-align:center;font-size:11px;color:#666\">WEST to EAST</td></tr>';\n  lats.forEach(function (la, ri) {\n    gridHtml += '<tr><td style=\"font-size:10px;color:#666;padding-right:4px;text-align:right\">' + (ri === 0 ? 'North' : ri === lats.length - 1 ? 'South' : '') + '</td>';\n    lons.forEach(function (lo) {\n      var c = byPos[la + '|' + lo]; var p = c ? Number(c.pm25) : null; var k = cat(p);\n      var central = Math.abs(Number(la) - LAT0) <= 0.07 && Math.abs(Number(lo) - LON0) <= 0.09;\n      gridHtml += '<td style=\"background:' + k.color + ';color:#fff;width:62px;height:44px;text-align:center;font-size:13px;font-weight:bold;border-radius:4px' + (central ? ';border:3px solid #111' : '') + '\">' + (p === null ? '-' : fmt(p)) + '</td>';\n    });\n    gridHtml += '</tr>';\n  });\n  gridHtml += '</table><div style=\"text-align:center;font-size:11px;color:#666;margin-top:6px\">Each square is about 14 km x 14 km. Number = PM2.5 (ug/m3). Black outline = central Lahore. Darker red/purple = smokier air.</div>';\n} else {\n  gridHtml = '<div style=\"font-size:13px;color:#555\">No fresh air-quality map data right now.</div>';\n}\n\n// Ground sensors\nvar worst = sensors.slice().sort(function (a, b) { return Number(b.pm25) - Number(a.pm25); }).slice(0, 5);\nvar sensHtml = '';\nworst.forEach(function (o) {\n  sensHtml += '<tr><td style=\"padding:5px;border-bottom:1px solid #eee;font-size:13px\">' + esc(place(o.lat, o.lon)) + ' <a href=\"' + esc(gmap(o.lat, o.lon)) + '\" style=\"font-size:11px;color:#1565c0\">map</a></td><td style=\"padding:5px;border-bottom:1px solid #eee;font-size:13px;font-weight:bold\">' + fmt(o.pm25) + '</td><td style=\"padding:5px;border-bottom:1px solid #eee\">' + badge(Number(o.pm25)) + '</td></tr>';\n});\nif (!sensHtml) sensHtml = '<tr><td style=\"padding:6px;font-size:13px;color:#555\">No fresh ground-sensor readings.</td></tr>';\n\n// Forecast in plain words\nvar fcHtml = '<div style=\"font-size:13px;color:#555\">No forecast has been produced yet.</div>';\nvar f0 = fc.length ? fc.slice().sort(function (a, b) { return Date.parse(b.issued_at) - Date.parse(a.issued_at); })[0] : null;\nif (f0) {\n  var fAge = ageH(f0.issued_at);\n  var pm = num(f0.pm25_model), pn = num(f0.pm25_now);\n  var trend = 'about the same';\n  if (pm !== null && pn !== null) { if (pm > pn * 1.1) trend = 'getting worse'; else if (pm < pn * 0.9) trend = 'getting better'; }\n  var fk = cat(pm);\n  if (fAge === null || fAge > 8) {\n    fcHtml = '<div style=\"background:#ffebee;border:1px solid #c62828;color:#c62828;padding:8px;font-size:13px;font-weight:bold\">The latest forecast is out of date (' + (fAge === null ? '?' : Math.round(fAge)) + ' hours old) and is hidden so it is not mistaken for current.</div>';\n  } else {\n    fcHtml = '<div style=\"font-size:15px\">By <b>' + esc(local(f0.target_time)) + '</b> central Lahore air is expected to be <b style=\"color:' + fk.color + '\">' + esc(fk.name) + '</b> (about ' + fmt(pm) + ' ug/m3), ' + trend + ' compared with now (' + fmt(pn) + ').</div>';\n    var beats = f0.beats_baselines === true || f0.beats_baselines === 'true';\n    fcHtml += '<div style=\"font-size:12px;color:#555;margin-top:8px\">How reliable? We tested on ' + esc(f0.test_rows) + ' past hours the model had never seen. Its typical error was <b>' + fmt(f0.mae_model, 1) + '</b> ug/m3, versus ' + fmt(f0.mae_persistence, 1) + ' for the guess \"nothing changes\" and ' + fmt(f0.mae_seasonal, 1) + ' for the seasonal average. ' + (beats ? 'The model beats both simple guesses.' : 'The model does NOT currently beat both simple guesses, so treat it with care.') + ' (RMSE: ' + fmt(f0.rmse_model, 1) + ' vs ' + fmt(f0.rmse_persistence, 1) + ' and ' + fmt(f0.rmse_seasonal, 1) + '.)</div>';\n  }\n}\n\nvar banner = problems.length ? '<tr><td style=\"background:#ffebee;border:2px solid #c62828;padding:10px 16px;color:#c62828;font-size:13px;font-weight:bold\">DATA PROBLEM - parts of this report may be incomplete or out of date: ' + esc(problems.join(' | ')) + '</td></tr>' : '';\nvar sheetLink = '';\nvar sid = String(cfg.spreadsheet_id || '');\nif (sid && sid.charAt(0) !== '<') sheetLink = '<a href=\"https://docs.google.com/spreadsheets/d/' + esc(sid) + '\" style=\"color:#1565c0\">Open the full data in Google Sheets</a>';\n\nfunction section(title, body) {\n  return '<tr><td style=\"padding:18px 20px 6px;font-size:17px;font-weight:bold;color:#0d47a1;border-top:6px solid #eceff1\">' + title + '</td></tr><tr><td style=\"padding:4px 20px 14px\">' + body + '</td></tr>';\n}\n\nvar today = new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Karachi', dateStyle: 'long' });\nvar html = '<!DOCTYPE html><html><body style=\"margin:0;background:#cfd8dc;font-family:Arial,Helvetica,sans-serif;color:#222\">';\nhtml += '<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" style=\"padding:16px 8px\"><table width=\"640\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:640px;width:100%;background:#fff;border-radius:8px;overflow:hidden\">';\nhtml += '<tr><td style=\"background:#0d47a1;color:#fff;padding:20px\"><div style=\"font-size:12px;letter-spacing:1px\">LAHORE SMOKE WATCH - GOVERNMENT BRIEFING</div><div style=\"font-size:24px;font-weight:bold;margin-top:4px\">Where is the smoke worst, and why?</div><div style=\"font-size:12px;margin-top:6px;opacity:0.85\">' + esc(today) + ' | last hotspot check: ' + esc(det ? local(det.run_at) : 'never') + '</div></td></tr>';\nhtml += banner;\nhtml += '<tr><td style=\"background:' + hc.bg + ';padding:20px;border-bottom:4px solid ' + hc.color + '\"><div style=\"font-size:13px;color:#555\">Air in Lahore right now</div><div style=\"font-size:30px;font-weight:bold;color:' + hc.color + '\">' + esc(hc.name) + '</div><div style=\"font-size:15px;margin-top:2px\">PM2.5: <b>' + fmt(headline) + ' ug/m3</b> <span style=\"font-size:12px;color:#666\">(' + (sensorMed !== null ? 'median of ' + sensors.length + ' ground sensors' : 'air-quality model average') + (modelAvg !== null && sensorMed !== null ? '; model says ' + fmt(modelAvg) : '') + ')</span></div><div style=\"font-size:14px;margin-top:8px\"><b>What it means:</b> ' + esc(hc.advice) + '</div></td></tr>';\nhtml += section('1. Where is the smoke worst? (ranked)', '<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">' + hotHtml + '</table>');\nhtml += section('2. Why is it happening? (likely causes)', '<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">' + causeHtml + '</table><div style=\"font-size:11px;color:#777;margin-top:4px\">These are rule-based estimates marked likely or possible. Each must be confirmed by a field inspection before any action.</div>');\nhtml += section('3. Smoke map of the Lahore region', gridHtml);\nhtml += section('4. What will happen in the next 12 hours?', fcHtml);\nhtml += section('5. Worst readings from ground sensors', '<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"><tr><th align=\"left\" style=\"font-size:11px;color:#777;padding:4px\">Place</th><th align=\"left\" style=\"font-size:11px;color:#777;padding:4px\">PM2.5</th><th align=\"left\" style=\"font-size:11px;color:#777;padding:4px\">Level</th></tr>' + sensHtml + '</table>');\nhtml += section('6. Can we trust this report? (data health)', '<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">' + srcRows + '</table>');\nhtml += '<tr><td style=\"padding:16px 20px;background:#eceff1;font-size:11px;color:#555;border-top:6px solid #cfd8dc\">' + (sheetLink ? '<div style=\"font-size:13px;margin-bottom:8px\">' + sheetLink + '</div>' : '') + 'PM2.5 means tiny smoke and dust particles that reach deep into the lungs. This is a research prototype built only on public data (Open-Meteo CAMS, NASA FIRMS, OpenAQ, OpenStreetMap); it is not an official government system. Satellites and models are coarse and clouds or haze can hide fires, so results point to an area and cannot prove that a specific business broke the law. Pilot area: Lahore only.</td></tr>';\nhtml += '</table></td></tr></table></body></html>';\n\nvar subject = 'Lahore Smoke Report - ' + today + ' - ' + (headline === null ? 'no current data' : hc.name + ' (PM2.5 ' + fmt(headline) + ')') + (problems.length ? ' - DATA PROBLEM' : '');\nreturn [{ json: { subject: subject, html: html, recipient: cfg.recipient } }];\n"
+      },
+      "id": "9c56735b-3377-4f18-b482-1598c55f061d",
+      "name": "Build Dashboard Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        128
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.recipient }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Lahore Smoke Watch"
+        }
+      },
+      "id": "9b102855-239b-457a-b5c4-5b405203d8f1",
+      "name": "Email Dashboard",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        128
+      ],
+      "executeOnce": true,
+      "webhookId": "a4ec1849-9b85-4cd3-91ad-3dc985cd0981",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "zJeffJvKujvrZWS4",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Hotspots"
+        }
+      },
+      "id": "ab4eca7c-d253-4e64-a224-98cad559ddd0",
+      "name": "Clear Hotspots Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1328,
+        608
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Forecast"
+        }
+      },
+      "id": "57cdba3e-093f-4ea8-a8f2-04260fe3cee7",
+      "name": "Clear Forecast Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1552,
+        608
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Air Readings"
+        }
+      },
+      "id": "2f638c4a-a44a-4a8d-b508-9cbe3c7656ab",
+      "name": "Clear Air Readings Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1776,
+        608
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Fires"
+        }
+      },
+      "id": "1db11c81-5aca-4969-856d-f6c2f78a1b1c",
+      "name": "Clear Fires Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2000,
+        608
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Industrial Sites"
+        }
+      },
+      "id": "6da9e34a-c72a-440c-9443-82cdb2ca420c",
+      "name": "Clear Industrial Sites Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2224,
+        608
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Source Health"
+        }
+      },
+      "id": "62c67cbd-565f-4a22-9957-9a5865cd1a36",
+      "name": "Clear Source Health Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2448,
+        608
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function rows(name) {\n  try { return $(name).all().map(function (i) { return i.json; }).filter(function (j) { return j && j.id !== undefined; }); } catch (e) { return []; }\n}\nfunction local(iso) { var t = Date.parse(iso); if (!isFinite(t)) return ''; return new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Karachi', dateStyle: 'medium', timeStyle: 'short' }) + ' PKT'; }\nfunction place(lat, lon) {\n  var la = Number(lat), lo = Number(lon);\n  if (!isFinite(la) || !isFinite(lo)) return '';\n  var dn = (la - 31.52) * 111, de = (lo - 74.35) * 95;\n  var d = Math.sqrt(dn * dn + de * de);\n  if (d < 6) return 'Central Lahore';\n  var ang = Math.atan2(de, dn) * 180 / Math.PI; if (ang < 0) ang += 360;\n  var names = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];\n  return Math.round(d) + ' km ' + names[Math.round(ang / 45) % 8] + ' of central Lahore';\n}\nvar out = [];\nfunction add(prefix, list, fn) { list.forEach(function (r) { var o = fn(r); o.row_id = prefix + '-' + o.row_id; out.push({ json: o }); }); }\nadd('hotspot', rows('Read Hotspots'), function (h) {\n  return { row_id: h.id, detected_at: local(h.detected_at), location: place(h.lat, h.lon), lat: h.lat, lon: h.lon, pm25: h.pm25, severity: h.severity, priority_score: h.priority_score, likely_source: h.attribution, confidence: h.attribution_confidence, fires_upwind: h.fires_upwind, fires_nearby: h.fires_nearby, industrial_sites_nearby: h.facilities_nearby, ground_pm25: h.ground_pm25, ground_agreement: h.ground_agreement, evidence: h.evidence, map_link: 'https://www.google.com/maps?q=' + h.lat + ',' + h.lon };\n});\nadd('forecast', rows('Read Forecast'), function (f) {\n  return { row_id: f.id, issued_at: f.issued_at, target_time: f.target_time, pm25_now: f.pm25_now, pm25_model: f.pm25_model, pm25_persistence: f.pm25_persistence, pm25_seasonal: f.pm25_seasonal, pm25_cams: f.pm25_cams, mae_model: f.mae_model, mae_persistence: f.mae_persistence, mae_seasonal: f.mae_seasonal, rmse_model: f.rmse_model, rmse_persistence: f.rmse_persistence, rmse_seasonal: f.rmse_seasonal, beats_baselines: f.beats_baselines, train_rows: f.train_rows, test_rows: f.test_rows };\n});\nadd('reading', rows('Read Grid Readings').concat(rows('Read Ground Sensors')), function (o) {\n  return { row_id: o.id, observed_at: o.observed_at, source: o.source, cell_id: o.cell_id, lat: o.lat, lon: o.lon, pm25: o.pm25, pm10: o.pm10, no2: o.no2, aod: o.aod, temp_c: o.temp_c, humidity: o.humidity, wind_speed: o.wind_speed, wind_dir: o.wind_dir };\n});\nadd('fire', rows('Read Fires'), function (f) {\n  return { row_id: f.id, acq_time: f.acq_time, lat: f.lat, lon: f.lon, frp: f.frp, confidence: f.confidence, satellite: f.satellite, fire_key: f.fire_key };\n});\nadd('site', rows('Read Facilities'), function (f) {\n  return { row_id: f.id, facility_type: f.facility_type, name: f.name, lat: f.lat, lon: f.lon, location: place(f.lat, f.lon), osm_key: f.osm_key };\n});\nadd('health', rows('Read Pull Log'), function (l) {\n  return { row_id: l.id, run_at: l.run_at, run_id: l.run_id, source: l.source, status: l.status, records: l.records, message: l.message };\n});\nreturn out;\n"
+      },
+      "id": "1ae90f3f-38e9-433c-8c9d-3b12acf4f865",
+      "name": "Prepare Sheet Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2672,
+        608
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.row_id }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "rightValue": "hotspot-"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hotspots"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.row_id }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "rightValue": "forecast-"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Forecast"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.row_id }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "rightValue": "reading-"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Air Readings"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.row_id }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "rightValue": "fire-"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Fires"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.row_id }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "rightValue": "site-"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Industrial Sites"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.row_id }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "rightValue": "health-"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Source Health"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f07fd223-5c98-49b7-ac3b-ff8d6dd8b8b0",
+      "name": "Route Rows To Tab",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        2896,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Hotspots"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_id": "={{ $json.row_id }}",
+            "detected_at": "={{ $json.detected_at }}",
+            "location": "={{ $json.location }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "pm25": "={{ $json.pm25 }}",
+            "severity": "={{ $json.severity }}",
+            "priority_score": "={{ $json.priority_score }}",
+            "likely_source": "={{ $json.likely_source }}",
+            "confidence": "={{ $json.confidence }}",
+            "fires_upwind": "={{ $json.fires_upwind }}",
+            "fires_nearby": "={{ $json.fires_nearby }}",
+            "industrial_sites_nearby": "={{ $json.industrial_sites_nearby }}",
+            "ground_pm25": "={{ $json.ground_pm25 }}",
+            "ground_agreement": "={{ $json.ground_agreement }}",
+            "evidence": "={{ $json.evidence }}",
+            "map_link": "={{ $json.map_link }}"
+          },
+          "schema": [
+            {
+              "id": "row_id",
+              "displayName": "row_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "detected_at",
+              "displayName": "detected_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "pm25",
+              "displayName": "pm25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "priority_score",
+              "displayName": "priority_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "likely_source",
+              "displayName": "likely_source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fires_upwind",
+              "displayName": "fires_upwind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fires_nearby",
+              "displayName": "fires_nearby",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "industrial_sites_nearby",
+              "displayName": "industrial_sites_nearby",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "ground_pm25",
+              "displayName": "ground_pm25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "ground_agreement",
+              "displayName": "ground_agreement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "evidence",
+              "displayName": "evidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "map_link",
+              "displayName": "map_link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "a2370173-9530-40a2-bb7d-045fe148d794",
+      "name": "Save Hotspots Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3120,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Forecast"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_id": "={{ $json.row_id }}",
+            "issued_at": "={{ $json.issued_at }}",
+            "target_time": "={{ $json.target_time }}",
+            "pm25_now": "={{ $json.pm25_now }}",
+            "pm25_model": "={{ $json.pm25_model }}",
+            "pm25_persistence": "={{ $json.pm25_persistence }}",
+            "pm25_seasonal": "={{ $json.pm25_seasonal }}",
+            "pm25_cams": "={{ $json.pm25_cams }}",
+            "mae_model": "={{ $json.mae_model }}",
+            "mae_persistence": "={{ $json.mae_persistence }}",
+            "mae_seasonal": "={{ $json.mae_seasonal }}",
+            "rmse_model": "={{ $json.rmse_model }}",
+            "rmse_persistence": "={{ $json.rmse_persistence }}",
+            "rmse_seasonal": "={{ $json.rmse_seasonal }}",
+            "beats_baselines": "={{ $json.beats_baselines }}",
+            "train_rows": "={{ $json.train_rows }}",
+            "test_rows": "={{ $json.test_rows }}"
+          },
+          "schema": [
+            {
+              "id": "row_id",
+              "displayName": "row_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "issued_at",
+              "displayName": "issued_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "target_time",
+              "displayName": "target_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "pm25_now",
+              "displayName": "pm25_now",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "pm25_model",
+              "displayName": "pm25_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "pm25_persistence",
+              "displayName": "pm25_persistence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "pm25_seasonal",
+              "displayName": "pm25_seasonal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "pm25_cams",
+              "displayName": "pm25_cams",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "mae_model",
+              "displayName": "mae_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "mae_persistence",
+              "displayName": "mae_persistence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "mae_seasonal",
+              "displayName": "mae_seasonal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "rmse_model",
+              "displayName": "rmse_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "rmse_persistence",
+              "displayName": "rmse_persistence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "rmse_seasonal",
+              "displayName": "rmse_seasonal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "beats_baselines",
+              "displayName": "beats_baselines",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "train_rows",
+              "displayName": "train_rows",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "test_rows",
+              "displayName": "test_rows",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "ae81727b-9106-418d-b418-d481c95c2e00",
+      "name": "Save Forecast Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3120,
+        320
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Air Readings"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_id": "={{ $json.row_id }}",
+            "observed_at": "={{ $json.observed_at }}",
+            "source": "={{ $json.source }}",
+            "cell_id": "={{ $json.cell_id }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "pm25": "={{ $json.pm25 }}",
+            "pm10": "={{ $json.pm10 }}",
+            "no2": "={{ $json.no2 }}",
+            "aod": "={{ $json.aod }}",
+            "temp_c": "={{ $json.temp_c }}",
+            "humidity": "={{ $json.humidity }}",
+            "wind_speed": "={{ $json.wind_speed }}",
+            "wind_dir": "={{ $json.wind_dir }}"
+          },
+          "schema": [
+            {
+              "id": "row_id",
+              "displayName": "row_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "observed_at",
+              "displayName": "observed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "cell_id",
+              "displayName": "cell_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "pm25",
+              "displayName": "pm25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "pm10",
+              "displayName": "pm10",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "no2",
+              "displayName": "no2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "aod",
+              "displayName": "aod",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "temp_c",
+              "displayName": "temp_c",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "humidity",
+              "displayName": "humidity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "wind_speed",
+              "displayName": "wind_speed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "wind_dir",
+              "displayName": "wind_dir",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "2df5517f-b2e7-4448-a8e2-2befd7adeb57",
+      "name": "Save Air Readings Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3120,
+        512
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Fires"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_id": "={{ $json.row_id }}",
+            "acq_time": "={{ $json.acq_time }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "frp": "={{ $json.frp }}",
+            "confidence": "={{ $json.confidence }}",
+            "satellite": "={{ $json.satellite }}",
+            "fire_key": "={{ $json.fire_key }}"
+          },
+          "schema": [
+            {
+              "id": "row_id",
+              "displayName": "row_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "acq_time",
+              "displayName": "acq_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "frp",
+              "displayName": "frp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "satellite",
+              "displayName": "satellite",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "fire_key",
+              "displayName": "fire_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "cabe60ed-7bfa-41e6-b74b-53791cd027a3",
+      "name": "Save Fires Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3120,
+        704
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Industrial Sites"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_id": "={{ $json.row_id }}",
+            "facility_type": "={{ $json.facility_type }}",
+            "name": "={{ $json.name }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "location": "={{ $json.location }}",
+            "osm_key": "={{ $json.osm_key }}"
+          },
+          "schema": [
+            {
+              "id": "row_id",
+              "displayName": "row_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "facility_type",
+              "displayName": "facility_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "osm_key",
+              "displayName": "osm_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "ef7e46b7-cd6f-4b12-a42a-19af874e9a57",
+      "name": "Save Industrial Sites Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3120,
+        896
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Run Config\").first().json.spreadsheet_id }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Source Health"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_id": "={{ $json.row_id }}",
+            "run_at": "={{ $json.run_at }}",
+            "run_id": "={{ $json.run_id }}",
+            "source": "={{ $json.source }}",
+            "status": "={{ $json.status }}",
+            "records": "={{ $json.records }}",
+            "message": "={{ $json.message }}"
+          },
+          "schema": [
+            {
+              "id": "row_id",
+              "displayName": "row_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "run_id",
+              "displayName": "run_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "records",
+              "displayName": "records",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED"
+        }
+      },
+      "id": "fea20e8a-b757-438f-a541-5dc10e956b57",
+      "name": "Save Source Health Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3120,
+        1088
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NrOzPBTXmDevGDWS",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Twice Daily 07:00 and 18:00": {
+      "main": [
+        [
+          {
+            "node": "Run Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Config": {
+      "main": [
+        [
+          {
+            "node": "Read Hotspots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Hotspots": {
+      "main": [
+        [
+          {
+            "node": "Read Grid Readings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Grid Readings": {
+      "main": [
+        [
+          {
+            "node": "Read Ground Sensors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Ground Sensors": {
+      "main": [
+        [
+          {
+            "node": "Read Fires",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Fires": {
+      "main": [
+        [
+          {
+            "node": "Read Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Forecast": {
+      "main": [
+        [
+          {
+            "node": "Read Facilities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Facilities": {
+      "main": [
+        [
+          {
+            "node": "Read Pull Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Pull Log": {
+      "main": [
+        [
+          {
+            "node": "Build Dashboard Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Dashboard Email": {
+      "main": [
+        [
+          {
+            "node": "Email Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Clear Hotspots Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Hotspots Tab": {
+      "main": [
+        [
+          {
+            "node": "Clear Forecast Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Forecast Tab": {
+      "main": [
+        [
+          {
+            "node": "Clear Air Readings Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Air Readings Tab": {
+      "main": [
+        [
+          {
+            "node": "Clear Fires Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Fires Tab": {
+      "main": [
+        [
+          {
+            "node": "Clear Industrial Sites Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Industrial Sites Tab": {
+      "main": [
+        [
+          {
+            "node": "Clear Source Health Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear Source Health Tab": {
+      "main": [
+        [
+          {
+            "node": "Prepare Sheet Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Sheet Rows": {
+      "main": [
+        [
+          {
+            "node": "Route Rows To Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Rows To Tab": {
+      "main": [
+        [
+          {
+            "node": "Save Hotspots Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Forecast Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Air Readings Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Fires Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Industrial Sites Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Source Health Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9e69dcb9-8f01-4adb-9e30-af07ed080531",
+  "meta": {
+    "instanceId": "f5edcadffac9b96e337b4d063f2d82e4614b33770dda19b26f9e5d432da89108"
+  },
+  "nodeGroups": [
+    {
+      "id": "dad804e3-59d0-4f87-ae49-3d0d8186fb94",
+      "name": "Collect latest results",
+      "nodeIds": [
+        "83a3a7dc-dd78-4d4f-860f-57257038eb62",
+        "a52de2db-e845-4960-9b5f-54f4ec887d18",
+        "98bf7210-a372-4369-a372-8276fe37cdf4",
+        "764c59b4-07b8-4f4a-96eb-c9054346825f",
+        "2b7d7465-2f5c-48c2-b16e-0ee23168de76",
+        "6f4bef12-ef80-4446-a282-45909924f312",
+        "6a69a634-8b0a-47f3-ac69-f3bac9051556",
+        "7d724e50-0da8-4103-aada-10d0fc72bba8"
+      ],
+      "description": "Reads the newest hotspots, air readings, fires, forecast, sites and source log from the data tables"
+    },
+    {
+      "id": "b5fec97b-a277-408a-82de-d11b5634288d",
+      "name": "Email the dashboard",
+      "nodeIds": [
+        "9c56735b-3377-4f18-b482-1598c55f061d",
+        "9b102855-239b-457a-b5c4-5b405203d8f1"
+      ],
+      "description": "Builds a plain-language report with hotspots, causes, map and forecast and mails it to the government contact"
+    },
+    {
+      "id": "367b4718-1987-469c-87db-44c3f87afdc2",
+      "name": "Save to Google Sheets",
+      "nodeIds": [
+        "ab4eca7c-d253-4e64-a224-98cad559ddd0",
+        "57cdba3e-093f-4ea8-a8f2-04260fe3cee7",
+        "2f638c4a-a44a-4a8d-b508-9cbe3c7656ab",
+        "1db11c81-5aca-4969-856d-f6c2f78a1b1c",
+        "6da9e34a-c72a-440c-9443-82cdb2ca420c",
+        "62c67cbd-565f-4a22-9957-9a5865cd1a36",
+        "1ae90f3f-38e9-433c-8c9d-3b12acf4f865",
+        "f07fd223-5c98-49b7-ac3b-ff8d6dd8b8b0",
+        "a2370173-9530-40a2-bb7d-045fe148d794",
+        "ae81727b-9106-418d-b418-d481c95c2e00",
+        "2df5517f-b2e7-4448-a8e2-2befd7adeb57",
+        "cabe60ed-7bfa-41e6-b74b-53791cd027a3",
+        "ef7e46b7-cd6f-4b12-a42a-19af874e9a57",
+        "fea20e8a-b757-438f-a541-5dc10e956b57"
+      ],
+      "description": "Refreshes six spreadsheet tabs with all hotspots, readings, fires, forecasts, sites and source health"
+    }
+  ],
+  "id": "90ucL1KgygN8wsXD",
+  "tags": []
+}

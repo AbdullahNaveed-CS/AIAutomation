@@ -1,0 +1,435 @@
+{
+  "name": "Smoke – 4. Ground Sensors (OpenAQ)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      },
+      "id": "8ac7f767-d61a-4212-bdad-073dd4b14bf0",
+      "name": "Hourly Ground Pull",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openaq.org/v3/locations?bbox=74.0,31.2,74.7,31.85&parameters_id=2&limit=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d438b713-bfbc-420d-a068-aaa2a4aa8156",
+      "name": "Fetch OpenAQ Locations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpTemplatedCustomAuth": {
+          "id": "qsCODFQNZorWXxRD",
+          "name": "OpenAQ API Key (NOWAK A)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "var allIn = $input.all();\nvar res = allIn.length ? allIn[0].json : null;\nvar nowMs = Date.now();\nif (!res || !Array.isArray(res.results)) {\n  var err = res && res.error ? JSON.stringify(res.error).substring(0, 300) : 'OpenAQ returned no results object';\n  return [{ json: { location_id: null, error: err } }];\n}\nvar picks = [];\nfor (var i = 0; i < res.results.length; i++) {\n  var loc = res.results[i];\n  var last = loc.datetimeLast && loc.datetimeLast.utc ? Date.parse(loc.datetimeLast.utc) : NaN;\n  if (!isFinite(last) || (nowMs - last) > 6 * 3600000) continue;\n  var ids = [];\n  var sensors = loc.sensors || [];\n  for (var s = 0; s < sensors.length; s++) {\n    if (sensors[s].parameter && (sensors[s].parameter.id === 2 || sensors[s].parameter.name === 'pm25')) ids.push(sensors[s].id);\n  }\n  if (!ids.length || !loc.coordinates) continue;\n  picks.push({ location_id: loc.id, name: loc.name, lat: loc.coordinates.latitude, lon: loc.coordinates.longitude, pm25_sensor_ids: ids, last: last });\n}\npicks.sort(function (a, b) { return b.last - a.last; });\nvar top = picks.slice(0, 30);\nif (!top.length) return [{ json: { location_id: null, error: null } }];\nreturn top.map(function (p) { return { json: p }; });"
+      },
+      "id": "d52ce1ce-d6bb-4070-bae1-812a55157e07",
+      "name": "Pick Active Locations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "=https://api.openaq.org/v3/locations/{{ $json.location_id || 2178 }}/latest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1500
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "84330503-db64-40d6-8ef4-1cadd8681aec",
+      "name": "Fetch Latest Readings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        672,
+        96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpTemplatedCustomAuth": {
+          "id": "qsCODFQNZorWXxRD",
+          "name": "OpenAQ API Key (NOWAK A)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "var runAt = new Date().toISOString();\nvar runId = 'aq' + Date.now();\nvar nowMs = Date.now();\nvar out = [];\nfunction logItem(status, records, message) {\n  return { json: { kind: 'log', run_at: runAt, run_id: runId, source: 'openaq', status: status, records: records, message: String(message).substring(0, 400) } };\n}\nvar picks = $('Pick Active Locations').all().map(function (i) { return i.json; });\nvar latest = $input.all().map(function (i) { return i.json; });\nif (!picks.length || !picks[0].location_id) {\n  if (picks.length && picks[0].error) return [logItem('failed', 0, picks[0].error)];\n  return [logItem('ok', 0, 'No OpenAQ PM2.5 stations reported in the last 6 hours inside the Lahore area')];\n}\nvar stale = 0;\nvar failed = 0;\nvar bad = 0;\nfor (var i = 0; i < picks.length; i++) {\n  var pick = picks[i];\n  var item = latest[i];\n  if (!item || item.error || !Array.isArray(item.results)) { failed++; continue; }\n  var got = false;\n  for (var r = 0; r < item.results.length; r++) {\n    var res = item.results[r];\n    if (pick.pm25_sensor_ids.indexOf(res.sensorsId) === -1) continue;\n    var v = Number(res.value);\n    if (!isFinite(v) || v < 0 || v > 1500) { bad++; continue; }\n    var t = res.datetime && res.datetime.utc ? Date.parse(res.datetime.utc) : NaN;\n    if (!isFinite(t) || (nowMs - t) > 3 * 3600000) { stale++; continue; }\n    out.push({ json: { kind: 'obs', observed_at: new Date(t).toISOString(), cell_id: 'gs_' + pick.location_id, lat: pick.lat, lon: pick.lon, pm25: v, source: 'openaq' } });\n    got = true;\n  }\n}\nvar status = out.length === 0 ? 'failed' : (failed > 0 ? 'partial' : 'ok');\nout.push(logItem(status, out.length, 'Stations queried: ' + picks.length + ', valid readings: ' + out.length + ', failed requests: ' + failed + ', stale: ' + stale + ', invalid values removed: ' + bad));\nreturn out;"
+      },
+      "id": "6272da9a-df69-4b08-a940-f07f6191e828",
+      "name": "Validate Readings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "obs"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "observations"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "log"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "log"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "88a7120b-f61a-4854-9e82-ef82b6cc54c5",
+      "name": "Route Ground Output",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "h6A6b6YqQBIzW5c5",
+          "cachedResultName": "smoke_observations"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "observed_at": "={{ $json.observed_at }}",
+            "cell_id": "={{ $json.cell_id }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}",
+            "pm25": "={{ $json.pm25 }}",
+            "source": "={{ $json.source }}"
+          },
+          "schema": [
+            {
+              "id": "observed_at",
+              "displayName": "observed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cell_id",
+              "displayName": "cell_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pm25",
+              "displayName": "pm25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "optimizeBulk": true
+        }
+      },
+      "id": "6180be20-0583-4d18-9bc7-90a1bdcb5f13",
+      "name": "Save Ground Readings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "voAbz9aKaSqfrnLq",
+          "cachedResultName": "smoke_pull_log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_at": "={{ $json.run_at }}",
+            "run_id": "={{ $json.run_id }}",
+            "source": "={{ $json.source }}",
+            "status": "={{ $json.status }}",
+            "records": "={{ $json.records }}",
+            "message": "={{ $json.message }}"
+          },
+          "schema": [
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "run_id",
+              "displayName": "run_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "records",
+              "displayName": "records",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e17e6c4a-b87b-4be4-82c0-1e722487b50a",
+      "name": "Save Ground Log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        192
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Hourly Ground Pull": {
+      "main": [
+        [
+          {
+            "node": "Fetch OpenAQ Locations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch OpenAQ Locations": {
+      "main": [
+        [
+          {
+            "node": "Pick Active Locations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Active Locations": {
+      "main": [
+        [
+          {
+            "node": "Fetch Latest Readings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Latest Readings": {
+      "main": [
+        [
+          {
+            "node": "Validate Readings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Readings": {
+      "main": [
+        [
+          {
+            "node": "Route Ground Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Ground Output": {
+      "main": [
+        [
+          {
+            "node": "Save Ground Readings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Ground Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5838e6c8-3994-496d-b4e9-5125c2ddf1fd",
+  "meta": {
+    "instanceId": "f5edcadffac9b96e337b4d063f2d82e4614b33770dda19b26f9e5d432da89108"
+  },
+  "nodeGroups": [],
+  "id": "jF3CpD8Kh1y55Lbe",
+  "tags": []
+}

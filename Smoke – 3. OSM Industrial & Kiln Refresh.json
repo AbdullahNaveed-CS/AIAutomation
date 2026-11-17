@@ -1,0 +1,387 @@
+{
+  "name": "Smoke – 3. OSM Industrial & Kiln Refresh",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "c3a31407-29fd-433a-9ee5-9b5750dd560f",
+      "name": "Weekly Refresh",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://overpass-api.de/api/interpreter",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "LahoreSmokeResearch/1.0 (academic pilot; n8n)"
+            },
+            {
+              "name": "Accept",
+              "value": "*/*"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "[out:json][timeout:90];(nwr[\"industrial\"=\"brick_kiln\"](31.15,73.9,31.85,74.7);nwr[\"craft\"=\"brickmaker\"](31.15,73.9,31.85,74.7);nwr[\"man_made\"=\"works\"](31.15,73.9,31.85,74.7);nwr[\"landuse\"=\"industrial\"](31.15,73.9,31.85,74.7););out center tags 1500;"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "0de1ad75-886c-44d1-91da-71d8c3b9a2b2",
+      "name": "Fetch OSM Facilities",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        224,
+        96
+      ],
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 20000,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "var runAt = new Date().toISOString();\nvar allIn = $input.all();\nvar res = allIn.length ? allIn[0].json : null;\nfunction logItem(status, records, message) {\n  return { json: { kind: 'log', run_at: runAt, run_id: 'osm' + Date.now(), source: 'osm-facilities', status: status, records: records, message: String(message).substring(0, 400) } };\n}\nif (!res || !Array.isArray(res.elements)) {\n  var err = res && res.error ? JSON.stringify(res.error) : 'Overpass returned no elements';\n  return [logItem('failed', 0, err)];\n}\nvar rank = { brick_kiln: 0, works: 1, industrial_land: 2 };\nvar items = [];\nfor (var i = 0; i < res.elements.length; i++) {\n  var el = res.elements[i];\n  var tags = el.tags || {};\n  var lat = el.lat !== undefined ? el.lat : (el.center ? el.center.lat : null);\n  var lon = el.lon !== undefined ? el.lon : (el.center ? el.center.lon : null);\n  if (lat === null || lon === null) continue;\n  var type = 'industrial_land';\n  var nm = String(tags.name || '');\n  if (tags.industrial === 'brick_kiln' || tags.craft === 'brickmaker' || /brick|bhatta|kiln/i.test(nm)) type = 'brick_kiln';\n  else if (tags.man_made === 'works') type = 'works';\n  items.push({ kind: 'facility', osm_key: el.type + '/' + el.id, facility_type: type, name: nm || String(tags.industrial || tags.landuse || ''), lat: lat, lon: lon });\n}\nitems.sort(function (a, b) { return rank[a.facility_type] - rank[b.facility_type]; });\nvar kept = items.slice(0, 1500);\nvar out = kept.map(function (x) { return { json: x }; });\nout.push(logItem('ok', kept.length, 'Facilities refreshed from OpenStreetMap: ' + kept.length));\nreturn out;"
+      },
+      "id": "2b2d9952-c3f6-4d7e-8e4f-167831039e35",
+      "name": "Classify Facilities",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "facility"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "facility"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "log"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "log"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "99012e23-d224-4d5a-bd7d-192397ecc647",
+      "name": "Route Facility Output",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "06Txu5eZL5aZGxdF",
+          "cachedResultName": "smoke_facilities"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "osm_key",
+              "keyValue": "={{ $json.osm_key }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "osm_key": "={{ $json.osm_key }}",
+            "facility_type": "={{ $json.facility_type }}",
+            "name": "={{ $json.name }}",
+            "lat": "={{ $json.lat }}",
+            "lon": "={{ $json.lon }}"
+          },
+          "matchingColumns": [
+            "osm_key"
+          ],
+          "schema": [
+            {
+              "id": "osm_key",
+              "displayName": "osm_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "facility_type",
+              "displayName": "facility_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lon",
+              "displayName": "lon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2630594e-7219-4b67-8287-4102f063acf2",
+      "name": "Save Facility",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "voAbz9aKaSqfrnLq",
+          "cachedResultName": "smoke_pull_log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_at": "={{ $json.run_at }}",
+            "run_id": "={{ $json.run_id }}",
+            "source": "={{ $json.source }}",
+            "status": "={{ $json.status }}",
+            "records": "={{ $json.records }}",
+            "message": "={{ $json.message }}"
+          },
+          "schema": [
+            {
+              "id": "run_at",
+              "displayName": "run_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "run_id",
+              "displayName": "run_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "records",
+              "displayName": "records",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "eea80242-9d1b-49cc-8bfe-66298c29cfa8",
+      "name": "Save Facility Log",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        192
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Weekly Refresh": {
+      "main": [
+        [
+          {
+            "node": "Fetch OSM Facilities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch OSM Facilities": {
+      "main": [
+        [
+          {
+            "node": "Classify Facilities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Facilities": {
+      "main": [
+        [
+          {
+            "node": "Route Facility Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Facility Output": {
+      "main": [
+        [
+          {
+            "node": "Save Facility",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Facility Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1f467ec4-81eb-4dd3-80ff-e325bb941023",
+  "meta": {
+    "instanceId": "f5edcadffac9b96e337b4d063f2d82e4614b33770dda19b26f9e5d432da89108"
+  },
+  "nodeGroups": [],
+  "id": "wS7wfOlwgCLuCprW",
+  "tags": []
+}
