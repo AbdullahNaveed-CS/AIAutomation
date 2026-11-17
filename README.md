@@ -29,7 +29,7 @@ An automated air quality monitoring, hotspot attribution, and PM2.5 forecasting 
 4. **Initialize & Publish:** Execute **Workflow 3** (facilities) and **Workflow 4** (ground sensors) once to seed baseline tables, then activate all schedules.
 
 ---
-
+## Other Automation Systems in This Repository
 * **[Healthcare AI](./healthcare-ai):** Neurological patient assessment logging (`BrainGuard AI`) and automated clinic appointment scheduling.
 * **[Business & Operations](./business-automation):** End-to-end solar company pipeline automation and US consultancy intake workflows.
 * **[Data & Messaging Agents](./data-and-messaging-agents):** Cross-platform Telegram + Gmail automated data analysis pipelines and conversational AI agents.
