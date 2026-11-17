@@ -1,152 +1,39 @@
-☀️ AI-Driven Satellite Solar Sizing Tool
+# AIAutomation — Intelligent Systems & Environmental Analytics
 
-**An automated, satellite-assisted solar capacity estimator engineered for remote site assessment and low-bandwidth environments.**
-
----
-
-## 📌 Executive Summary
-
-Determining solar PV feasibility traditionally requires physical site visits, manual roof measurements, and costly shading analysis. **AI Solar Sizing Tool** automates this pipeline by analyzing satellite image data to estimate rooftop surface area, optimal panel orientation, and projected annual kilowatt-hour (kWh) output. 
-
-Engineered with an **offline-first caching layer**, this tool allows energy auditors and technical teams in power-constrained regions to run complete solar assessments without requiring continuous high-speed internet.
+A collection of production **n8n automation workflows**, **AI agents**, and **environmental data pipelines** engineered by **Abdullah Naveed**.
 
 ---
 
-## 🚀 Key Features
+## Featured Project: Lahore Smoke Watch (`v1.0.0`)
 
-* **Satellite Image Area Extraction**: Identifies usable rooftop surface area from aerial imagery inputs.
-* **Irradiance & Yield Calculation**: Computes solar irradiance estimates based on regional coordinates and tilt angles.
-* **System Capacity & Panel Layout**: Calculates maximum panel density, inverter sizing requirements, and estimated daily/annual kWh yield.
-* **Offline-First Architecture**: Caches geographic dataset parameters locally to execute full computations during local grid blackouts.
-* **Automated PDF/JSON Report Generation**: Exports comprehensive technical summaries for engineers and clients in under 5 seconds.
+An automated air quality monitoring, hotspot attribution, and PM2.5 forecasting pipeline built for **Lahore, Punjab, Pakistan**. It integrates satellite fire detections, ground sensors, meteorological reanalysis, and industrial zoning data to identify smoke sources and generate plain-language public health briefings.
 
----
+### Architecture (6 Modular Workflows)
+| # | Workflow | Schedule | Core Function |
+|---|---|---|---|
+| **1** | **Data Pipeline & Hotspot Detection** | Hourly | Pulls Open-Meteo (CAMS) weather/air quality & NASA FIRMS fire data across a 25-cell Lahore grid, clusters fires, flags hotspots, and attributes likely causes (crop burning, brick kilns, industrial). |
+| **2** | **12-Hour PM2.5 Forecast** | Every 3 hrs | Trains a ridge regression model on 60 days of history and benchmarks MAE/RMSE against persistence and seasonal baselines. |
+| **3** | **OSM Industrial & Kiln Refresh** | Weekly | Queries OpenStreetMap Overpass API to map brick kilns, factories, and industrial zones around Lahore. |
+| **4** | **Ground Sensors (OpenAQ)** | Hourly | Ingests live PM2.5 readings from 30+ ground monitoring stations in Lahore and logs API health. |
+| **5** | **Officer Dashboard** | Webhook | Serves a zero-script, low-bandwidth HTML/SVG situational dashboard with ranked hotspots and source health. |
+| **6** | **Google Sheets Sync & Email Digest** | Twice Daily | Exports all 6 data tables to Google Sheets and emails a non-specialist public health summary via Gmail. |
 
-## 🏗️ System Architecture &amp; Workflow
-
-```
-
-[ Satellite Input / Coordinates ]
-               │
-               ▼
-┌─────────────────────────────┐
-│    Image Preprocessing      │ ◄── Grayscale / Edge Detection (OpenCV)
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│    Surface & Tilt Math      │ ◄── Spatial Area & Orientation Algorithm
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│      Irradiance Engine      │ ◄── Offline Solar Dataset Caching
-└──────────────┬──────────────┘
-               │
-               ▼
- [ Automated Feasibility Report ] ──► (JSON / PDF Output)
-
-```
+### Setup & Import Guide
+1. **Create 6 n8n Data Tables:** `smoke_observations`, `smoke_fires`, `smoke_hotspots`, `smoke_forecasts`, `smoke_facilities`, and `smoke_pull_log`.
+2. **Import Workflows:** In n8n, open **Workflows → Add workflow → Import from File** and upload each `.json` file from `lahore-smoke-watch/workflows/`.
+3. **Add API Keys:** Configure credentials for **NASA FIRMS (`MAP_KEY`)**, **OpenAQ**, **Google Sheets**, and **Gmail** in the respective setup nodes.
+4. **Initialize & Publish:** Execute **Workflow 3** (facilities) and **Workflow 4** (ground sensors) once to seed baseline tables, then activate all schedules.
 
 ---
 
-## 🛠️ Tech Stack &amp; Dependencies
-
-* **Language**: Python 3.10+
-* **Data & Image Processing**: `NumPy`, `Pandas`, `OpenCV (`cv2`)`, `Pillow`
-* **Math & Solar Analytics**: `SciPy`, Custom Photovoltaic Yield Modules
-* **Visualization & Reporting**: `Matplotlib`, `ReportLab`
-* **Version Control &a CI/CD**: Git, GitHub Actions
+## Other Automation Systems in This Repository
+* **Healthcare AI:** `BrainGuard AI — Patient Assessment Records.json`, `Doctor's appointment agent.json`
+* **Business & Operations:** `Automate entire solar company.json`, `Complete consultancy United States agency.json`
+* **Data & Messaging Pipelines:** `Complete Telegram + Gmail data analysis workflow.json`, `Complete workflow of data analysis.json`, `AI Chat Agent.json`
 
 ---
 
-## 💻 Installation &amp; Quick Start
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/AbdullahNaveed-CS/AIAutomation.git
-cd ai-solar-sizing-tool
-
-```
-
-### 2\. Set Up Virtual Environment
-
-```
-python3 -m venv venv
-source venv/bin/activate    # On Windows: venv\Scripts\activate
-
-```
-
-### 3\. Install Dependencies
-
-```
-pip install -r requirements.txt
-
-```
-
-### 4\. Run Assessment Script
-
-```
-python main.py --coords "31.5204, 74.3587" --roof-area 150 --tilt 30
-
-```
-
----
-
-## 📊 Sample Output &amp; Terminal Logs
-
-```
-==================================================
-        AI SOLAR SIZING FEASIBILITY REPORT        
-==================================================
-Target Location     : Lahore, Punjab (31.5204° N, 74.3587° E)
-Usable Roof Area    : 150.00 m²
-Optimal Tilt Angle  : 30.0° South-Facing
-Estimated Panels (400W): 42 Panels
-Total System Size   : 16.8 kWp
-Est. Annual Production: 24,850 kWh/year
-CO2 Offset          : 17.4 Tons / Year
-Processing Time     : 1.42 seconds (Offline Mode)
-==================================================
-
-```
-
----
-
-## 📂 Repository Structure
-
-```
-ai-solar-sizing-tool/
-├── data/
-│   ├── sample_images/       # Sample rooftop satellite imagery inputs
-│   └── cached_irradiance/   # Local offline solar data tables
-├── src/
-│   ├── image_parser.py      # Roof detection &amp; spatial masking
-│   ├── solar_calculator.py  # Solar yield &amp; panel density math
-│   └── report_generator.py # Automated PDF summary generator
-├── tests/
-│   └── test_calculations.py # Unit tests for calculation accuracy
-├── .gitignore
-├── LICENSE                  # MIT License
-├── README.md                # Technical Documentation
-└── main.py                  # CLI Entry point
-
-```
-
----
-
-## ⚡ Performance &amp; Resource Constraints
-
-* **Offline Compatibility**: Runs seamlessly without active network calls once local dataset caches are loaded.
-* **Low Computational Overhead**: Tested to run efficiently on low-spec systems and battery-powered portable hardware.
-
----
-
-## 👤 Author &amp; Contact
-
-**Developed by**: Your Official Full Name
-
-* High School Senior & Independent Computer Science Developer
-* **Focus**: Cloud Security, DevSecOps, & Resilient Systems Architecture
-* **Founder**: Skill Up Youth EdTech Initiative
----
+## Author
+**Abdullah Naveed**  
+Computer Science Student & AI Automation Builder — Gujranwala / Lahore, Pakistan  
+GitHub: [@AbdullahNaveed-CS](https://github.com/AbdullahNaveed-CS)
